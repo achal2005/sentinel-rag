@@ -1,0 +1,7 @@
+# Week 1 RAG core keeps deps intentionally tiny.
+# DB driver: psycopg 3 (binary wheel bundles libpq, no system Postgres needed).
+psycopg[binary]>=3.2
+# Embeddings + chat are called over Ollama's HTTP API using the stdlib,
+# so no LLM SDK is required yet. FastAPI / LangGraph arrive in Week 2.
+fastapi
+uvicorn[standard]

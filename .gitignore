@@ -1,0 +1,35 @@
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Environment / secrets (keep .env.example tracked)
+.env
+.env.*
+!.env.example
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Browser-automation / temp artifacts
+.playwright-mcp/
+
+# Claude Code local settings / state
+.claude/
+
+# Personal strategy & pitch doc — kept out of the public repo.
+# (Delete the line below if you actually want to publish it.)
+AgentOps_9-10_Final_Build_Plan.md
+
+# Week 1 guide PDF — kept local (interview prep), not published.
+Sentinel_Week1_Guide.pdf
