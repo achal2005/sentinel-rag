@@ -17,5 +17,31 @@ services:
       timeout: 5s
       retries: 12
 
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: sentinel-n8n
+    restart: unless-stopped
+    environment:
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      # Base URL for both test and production webhooks (replaces the deprecated WEBHOOK_URL).
+      N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://localhost:5679/}
+      GENERIC_TIMEZONE: ${N8N_TIMEZONE:-UTC}
+      # Stable key so credentials in the n8ndata volume stay decryptable across restarts.
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-sentinel-dev-encryption-key-change-me}
+      # 2.x uses the owner account for auth (basic-auth env is ignored); silence outbound telemetry.
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+    # Host port 5679 (5678 is commonly taken by another local n8n); container port stays 5678.
+    ports:
+      - "${N8N_HOST_PORT:-5679}:5678"
+    volumes:
+      - n8ndata:/home/node/.n8n
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   pgdata:
+  n8ndata:

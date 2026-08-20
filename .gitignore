@@ -23,6 +23,8 @@ Thumbs.db
 
 # Browser-automation / temp artifacts
 .playwright-mcp/
+n8n/_cookie.txt
+*.bak
 
 # Claude Code local settings / state
 .claude/
@@ -31,5 +33,7 @@ Thumbs.db
 # (Delete the line below if you actually want to publish it.)
 AgentOps_9-10_Final_Build_Plan.md
 
-# Week 1 guide PDF — kept local (interview prep), not published.
+# Learning/prep PDFs — kept local (interview prep), not published.
 Sentinel_Week1_Guide.pdf
+Sentinel_Build_Roadmap.pdf
+n8n/credentials.local.json

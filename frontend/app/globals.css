@@ -1,0 +1,166 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---- Design tokens: "midnight instrument panel" ------------------------ *
+ * Deep blue-ink base (not pure black), with a SEMANTIC route color system:
+ * the outcome of a triage (answer / action / escalate / spam) is encoded in
+ * color because routing is the whole point of the product.
+ * ----------------------------------------------------------------------- */
+@theme inline {
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  /* surfaces (namespaced so they don't collide with shadcn's tokens) */
+  --color-ink: #090b10;
+  --color-surface: #0f131b;
+  --color-surface-2: #151b25;
+  --color-edge: #232b39;
+  --color-edge-strong: #303a4b;
+
+  /* text */
+  --color-fg: #e7ecf3;
+  --color-dim: #98a2b3;
+  --color-faint: #626c7e;
+
+  /* brand + semantic routes */
+  --color-brand: #6e8bff;
+  --color-answer: #34d6be;
+  --color-action: #f6b44a;
+  --color-escalate: #ff6b6b;
+  --color-spam: #7a8698;
+
+  /* shadcn's tokens, mapped through as usual */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+/* Dark-only app: point shadcn's runtime vars at the ink palette so the
+ * Button primitive and friends inherit the same look. */
+:root,
+.dark {
+  --radius: 0.75rem;
+  --background: #090b10;
+  --foreground: #e7ecf3;
+  --card: #0f131b;
+  --card-foreground: #e7ecf3;
+  --popover: #151b25;
+  --popover-foreground: #e7ecf3;
+  --primary: #6e8bff;
+  --primary-foreground: #0a0c11;
+  --secondary: #151b25;
+  --secondary-foreground: #e7ecf3;
+  --muted: #151b25;
+  --muted-foreground: #98a2b3;
+  --accent: #1a2130;
+  --accent-foreground: #e7ecf3;
+  --destructive: #ff6b6b;
+  --border: #232b39;
+  --input: #232b39;
+  --ring: #6e8bff;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    font-family: var(--font-sans), system-ui, sans-serif;
+  }
+  body {
+    background-color: var(--color-ink);
+    color: var(--color-fg);
+    /* faint instrument-grid backdrop + a soft signal glow up top */
+    background-image:
+      radial-gradient(
+        60rem 40rem at 50% -8rem,
+        color-mix(in oklab, var(--color-brand) 12%, transparent),
+        transparent 70%
+      ),
+      linear-gradient(to right, color-mix(in oklab, var(--color-edge) 40%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--color-edge) 40%, transparent) 1px, transparent 1px);
+    background-size: 100% 100%, 46px 46px, 46px 46px;
+    background-attachment: fixed;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--color-brand) 40%, transparent);
+    color: #fff;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-edge);
+    border-radius: 999px;
+    border: 2px solid var(--color-ink);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-edge-strong);
+  }
+}
+
+/* ---- Display type: the wordmark + headings carry the personality ------- */
+.font-display {
+  font-family: var(--font-display), system-ui, sans-serif;
+}
+
+/* ---- Motion: reveal choreography, restrained + reduced-motion aware ---- */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-rise {
+  animation: rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.animate-fade {
+  animation: fade 0.6s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

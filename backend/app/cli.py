@@ -4,6 +4,7 @@
     python -m app.cli ingest [--reset]    # load docs/ into pgvector
     python -m app.cli search "question"   # show hybrid retrieval hits
     python -m app.cli ask "question"      # full cited answer (or escalation)
+    python -m app.cli graph "request"     # router -> answer|action|escalate
 """
 from __future__ import annotations
 
@@ -62,6 +63,27 @@ def cmd_ask(args) -> None:
         print(f"  - [{h.citation_id or '(no-id)'}] {h.doc} — {h.heading} (sim={h.similarity:.3f})")
 
 
+def cmd_graph(args) -> None:
+    from .graph import run  # lazy import so other commands don't need langgraph
+
+    s = run(args.query)
+    d = s.get("decision")
+    print(f"Request: {args.query}\n")
+    if d:
+        print(f"[router] route={d.route}  urgency={d.urgency}  intent={d.intent}")
+    print(f"[branch] {s.get('route')} -> reason={s.get('reason')}  "
+          f"escalated={s.get('escalated', False)}\n")
+    print(s.get("answer", "(no answer)"))
+    if s.get("action"):
+        print(f"\nPlanned action: {s['action']}")
+    hits = s.get("hits") or []
+    if hits:
+        print("\nRetrieved:")
+        for h in hits:
+            print(f"  - [{h.citation_id or '(no-id)'}] {h.doc} — {h.heading} "
+                  f"(sim={h.similarity:.3f})")
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="app.cli", description="Sentinel RAG core CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -83,6 +105,10 @@ def main(argv=None) -> int:
     p_ask = sub.add_parser("ask", help="cited answer or escalation")
     p_ask.add_argument("query")
     p_ask.set_defaults(func=cmd_ask)
+
+    p_graph = sub.add_parser("graph", help="router -> answer|action|escalate")
+    p_graph.add_argument("query")
+    p_graph.set_defaults(func=cmd_graph)
 
     args = ap.parse_args(argv)
     args.func(args)

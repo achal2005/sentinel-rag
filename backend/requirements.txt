@@ -5,3 +5,8 @@ psycopg[binary]>=3.2
 # so no LLM SDK is required yet. FastAPI / LangGraph arrive in Week 2.
 fastapi
 uvicorn[standard]
+# Week 2: orchestrate router -> answer|action|escalate as a StateGraph.
+langgraph>=1.2
+# Validate tool params (create_ticket) before firing the n8n webhook.
+# Pulled in transitively by fastapi, but the action node imports it directly.
+pydantic>=2
