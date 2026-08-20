@@ -12,7 +12,11 @@ import sys
 from pydantic import ValidationError
 
 from app import tools
-from app.graph import _extract_ticket_params, action_node
+from app.graph import (
+    _extract_cancel_invoice_params,
+    _extract_ticket_params,
+    action_node,
+)
 from app.router import Decision
 
 
@@ -75,9 +79,11 @@ def main() -> int:
         tools._post_json = orig
 
     # --- action_node: extraction + success + graceful fallback --------------
+    # Use a support_issue intent so this exercises the low-risk create_ticket
+    # (execute) path; billing_dispute would route to the high-risk queue path.
     state = {
-        "request": "Please cancel invoice INV-2231, reach me at user@meridian.co",
-        "decision": Decision("action", "billing_dispute", "medium", True),
+        "request": "Our dashboard is down, reach me at user@meridian.co",
+        "decision": Decision("action", "support_issue", "medium", True),
     }
     params = _extract_ticket_params(state)
     fails += _check("extract pulls email", params["requester_email"] == "user@meridian.co")
@@ -106,7 +112,47 @@ def main() -> int:
     finally:
         tools.invoke = orig_invoke
 
-    total = 12
+    # --- risk levels + tool selection ---------------------------------------
+    fails += _check("create_ticket is low risk",
+                    tools.get_tool("create_ticket").risk_level == "low")
+    fails += _check("cancel_invoice is high risk",
+                    tools.get_tool("cancel_invoice").risk_level == "high")
+    fails += _check("requires_approval true only for high risk",
+                    tools.requires_approval(tools.get_tool("cancel_invoice"))
+                    and not tools.requires_approval(tools.get_tool("create_ticket")))
+    fails += _check("select() routes billing_dispute -> cancel_invoice",
+                    tools.select(Decision("action", "billing_dispute", "medium", True)).name
+                    == "cancel_invoice")
+    fails += _check("select() defaults unknown intent -> create_ticket",
+                    tools.select(Decision("action", "support_issue", "high", True)).name
+                    == "create_ticket")
+
+    inv_state = {
+        "request": "Please cancel invoice INV-2231, reach me at user@meridian.co",
+        "decision": Decision("action", "billing_dispute", "medium", True),
+    }
+    ci = _extract_cancel_invoice_params(inv_state)
+    fails += _check("cancel_invoice extraction pulls invoice id",
+                    ci["invoice_id"] == "INV-2231")
+
+    # --- high-risk path enqueues, never executes ----------------------------
+    orig_invoke, orig_enqueue = tools.invoke, tools.enqueue
+    invoked = {"called": False}
+    tools.invoke = lambda *a, **k: invoked.__setitem__("called", True) or {"id": "X"}
+    tools.enqueue = lambda name, prm, **kw: 99
+    try:
+        out = action_node(inv_state)
+        fails += _check("high-risk action is queued for approval",
+                        out["action"]["status"] == "pending_approval"
+                        and out["action"]["queue_id"] == 99
+                        and out["action"]["risk_level"] == "high"
+                        and out["reason"] == "action_queued_for_approval")
+        fails += _check("high-risk action does NOT auto-execute",
+                        invoked["called"] is False)
+    finally:
+        tools.invoke, tools.enqueue = orig_invoke, orig_enqueue
+
+    total = 20
     print(f"\n{total - fails}/{total} checks passed.")
     return 1 if fails else 0
 

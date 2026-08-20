@@ -78,6 +78,27 @@ CREATE TABLE IF NOT EXISTS runs (
 
 CREATE INDEX IF NOT EXISTS runs_created_idx ON runs (created_at DESC);
 CREATE INDEX IF NOT EXISTS runs_route_idx   ON runs (route);
+
+-- High-risk tool calls parked here for a human to approve before they execute
+-- (written by app/tools.py's enqueue()). Low/medium-risk tools skip this and
+-- run directly via their n8n webhook.
+CREATE TABLE IF NOT EXISTS approval_queue (
+    id          BIGSERIAL PRIMARY KEY,
+    tool        TEXT NOT NULL,      -- e.g. cancel_invoice
+    risk_level  TEXT NOT NULL,      -- low | medium | high (high is what lands here)
+    params      JSONB NOT NULL,     -- validated tool params to run on approval
+    request     TEXT,               -- the originating support request
+    route       TEXT,
+    urgency     TEXT,
+    reason      TEXT,               -- machine tag (router intent)
+    status      TEXT NOT NULL DEFAULT 'pending',  -- pending | approved | rejected | executed
+    decided_by  TEXT,               -- who approved/rejected (Week 3 UI)
+    decided_at  TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS approval_status_idx  ON approval_queue (status);
+CREATE INDEX IF NOT EXISTS approval_created_idx ON approval_queue (created_at DESC);
 """
 
 

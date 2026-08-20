@@ -30,6 +30,7 @@ from .retrieve import Hit
 from .router import Decision, route as route_request
 
 _EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
+_INVOICE_RE = re.compile(r"\bINV[-\s]?(\d+)\b", re.IGNORECASE)
 
 
 class GraphState(TypedDict, total=False):
@@ -89,19 +90,84 @@ def _extract_ticket_params(state: GraphState) -> dict[str, Any]:
     }
 
 
-def action_node(state: GraphState) -> GraphState:
-    """Open a ticket for a side-effecting request via the create_ticket tool.
+def _extract_cancel_invoice_params(state: GraphState) -> dict[str, Any]:
+    """Derive cancel_invoice params (invoice id + requester) from the request."""
+    request = (state.get("request") or "").strip()
+    d = state.get("decision")
+    invoice = _INVOICE_RE.search(request)
+    email = _EMAIL_RE.search(request)
+    return {
+        # Empty when no INV-xxxx is present -> validation fails -> graceful fallback.
+        "invoice_id": f"INV-{invoice.group(1)}" if invoice else "",
+        "requester_email": email.group(0) if email else None,
+        "reason": d.intent if d else "billing_dispute",
+    }
 
-    Extract params -> validate with Pydantic -> POST to the n8n webhook. If the
-    params don't validate or the webhook is unreachable, degrade gracefully by
-    queuing the request for human approval instead of failing the graph.
+
+def _extract_params(tool_name: str, state: GraphState) -> dict[str, Any]:
+    """Dispatch to the right param extractor for the selected tool."""
+    if tool_name == "cancel_invoice":
+        return _extract_cancel_invoice_params(state)
+    return _extract_ticket_params(state)
+
+
+def action_node(state: GraphState) -> GraphState:
+    """Carry out a side-effecting request by selecting and running a tool.
+
+    Flow: pick the tool for this intent -> extract + validate its params. If the
+    tool is HIGH RISK, queue it for human approval (it never auto-executes);
+    otherwise POST to its n8n webhook. Every failure mode degrades gracefully
+    (invalid params / webhook down / queue write failure) rather than crashing
+    the graph.
     """
-    params = _extract_ticket_params(state)
+    d = state.get("decision")
+    tool = tools.select(d)
+    params = _extract_params(tool.name, state)
+    ctx = {
+        "request": (state.get("request") or "").strip(),
+        "route": d.route if d else "action",
+        "urgency": d.urgency if d else "low",
+        "reason": d.intent if d else "action_request",
+    }
+
+    # --- high-risk: gate behind human approval, never execute ---------------
+    if tools.requires_approval(tool):
+        try:
+            queue_id = tools.enqueue(tool.name, params, **ctx)
+        except ValidationError as e:
+            return {
+                "action": {"tool": tool.name, "risk_level": tool.risk_level,
+                           **params, "status": "invalid", "error": e.errors()},
+                "answer": "I couldn't safely structure this high-risk action, so "
+                "I've flagged it for a human.",
+                "escalated": True,
+                "reason": "action_invalid_params",
+            }
+        except Exception as e:  # approval_queue write failed -> don't lose it
+            return {
+                "action": {"tool": tool.name, "risk_level": tool.risk_level,
+                           **params, "status": "pending_approval", "error": str(e)},
+                "answer": "I couldn't record this high-risk action for approval, so "
+                "I'm escalating it to a human.",
+                "escalated": True,
+                "reason": "approval_enqueue_failed",
+            }
+        return {
+            "action": {"tool": tool.name, "risk_level": tool.risk_level, **params,
+                       "status": "pending_approval", "queue_id": queue_id},
+            "answer": (f"This is a high-risk action ({tool.name}), so I've queued it "
+                       f"for human approval (approval #{queue_id}) before anything runs."),
+            "escalated": False,
+            "reason": "action_queued_for_approval",
+        }
+
+    # --- low / medium risk: execute directly via the tool's webhook ---------
     try:
-        result = tools.invoke("create_ticket", params)
+        result = tools.invoke(tool.name, params)
     except ValidationError as e:
         return {
-            "action": {**params, "status": "invalid", "error": e.errors()},
+            "action": {"tool": tool.name, **params, "status": "invalid",
+                       "error": e.errors()},
             "answer": "I couldn't structure this into a ticket; I've flagged it "
             "for a human to look at.",
             "escalated": False,
@@ -109,7 +175,8 @@ def action_node(state: GraphState) -> GraphState:
         }
     except tools.ToolError as e:
         return {
-            "action": {**params, "status": "pending_approval", "error": str(e)},
+            "action": {"tool": tool.name, **params, "status": "pending_approval",
+                       "error": str(e)},
             "answer": "I couldn't open the ticket automatically (the tool was "
             "unavailable); I've queued it for human follow-up.",
             "escalated": False,
@@ -118,8 +185,8 @@ def action_node(state: GraphState) -> GraphState:
 
     ticket_id = result.get("id")
     return {
-        "action": {**params, "status": "created", "ticket_id": ticket_id,
-                   "tool": "create_ticket"},
+        "action": {"tool": tool.name, "risk_level": tool.risk_level, **params,
+                   "status": "created", "ticket_id": ticket_id},
         "answer": (f"I've opened ticket #{ticket_id} for this; a human will follow up."
                    if ticket_id else "I've opened a ticket for this; a human will follow up."),
         "escalated": False,

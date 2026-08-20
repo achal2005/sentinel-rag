@@ -6,6 +6,7 @@
     python -m app.cli ask "question"      # full cited answer (or escalation)
     python -m app.cli graph "request"     # router -> answer|action|escalate
     python -m app.cli runs [--limit N]    # recent cost/trace log rows
+    python -m app.cli approvals [--limit N]  # high-risk actions awaiting approval
 """
 from __future__ import annotations
 
@@ -108,6 +109,19 @@ def cmd_runs(args) -> None:
               + (f"  ticket#{r['ticket_id']}" if r['ticket_id'] else ""))
 
 
+def cmd_approvals(args) -> None:
+    from . import tools
+
+    rows = tools.pending_approvals(args.limit)
+    if not rows:
+        print("Approval queue is empty.")
+        return
+    print(f"{'id':>4}  {'tool':<15} {'risk':<6} {'status':<10} reason")
+    for r in rows:
+        print(f"{r['id']:>4}  {r['tool']:<15} {r['risk_level']:<6} "
+              f"{r['status']:<10} {r['reason'] or ''}   params={r['params']}")
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="app.cli", description="Sentinel RAG core CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -137,6 +151,10 @@ def main(argv=None) -> int:
     p_runs = sub.add_parser("runs", help="recent cost/trace log rows")
     p_runs.add_argument("--limit", type=int, default=20, help="how many rows")
     p_runs.set_defaults(func=cmd_runs)
+
+    p_appr = sub.add_parser("approvals", help="high-risk actions awaiting approval")
+    p_appr.add_argument("--limit", type=int, default=20, help="how many rows")
+    p_appr.set_defaults(func=cmd_approvals)
 
     args = ap.parse_args(argv)
     args.func(args)

@@ -30,6 +30,12 @@ class ToolParam:
     description: str = ""
 
 
+# Risk tiers. "high" tools have a real, hard-to-undo side effect (money/data),
+# so they are never executed automatically -- they are queued for human approval.
+RISK_LEVELS = ("low", "medium", "high")
+HIGH_RISK = "high"
+
+
 @dataclass(frozen=True)
 class Tool:
     name: str
@@ -37,6 +43,7 @@ class Tool:
     webhook_path: str               # n8n webhook path, e.g. 'ticket' -> /webhook/ticket
     params: tuple[ToolParam, ...] = field(default_factory=tuple)
     method: str = "POST"
+    risk_level: str = "low"         # low | medium | high (see RISK_LEVELS)
 
     def url(self, base: str | None = None) -> str:
         base = (base or N8N_WEBHOOK_BASE).rstrip("/")
@@ -59,6 +66,7 @@ CREATE_TICKET = Tool(
         "'tickets' table via the n8n 'Webhook -> tickets' workflow."
     ),
     webhook_path="ticket",
+    risk_level="low",               # opening a ticket is safe / easily reversible
     params=(
         ToolParam("subject", "string", required=True,
                   description="Short one-line summary of the request."),
@@ -76,8 +84,28 @@ CREATE_TICKET = Tool(
 )
 
 
+CANCEL_INVOICE = Tool(
+    name="cancel_invoice",
+    description=(
+        "Cancel / void a customer invoice. A real financial side effect, so this "
+        "is HIGH RISK: it is never executed automatically -- the agent queues it "
+        "for a human to approve first (see the approval_queue table)."
+    ),
+    webhook_path="cancel-invoice",  # workflow need not exist yet: high-risk never auto-fires
+    risk_level="high",
+    params=(
+        ToolParam("invoice_id", "string", required=True,
+                  description="Invoice to cancel, e.g. INV-2231."),
+        ToolParam("requester_email", "string",
+                  description="Email of the requester."),
+        ToolParam("reason", "string",
+                  description="Why the invoice should be cancelled."),
+    ),
+)
+
+
 # The registry itself: name -> Tool.
-REGISTRY: dict[str, Tool] = {t.name: t for t in (CREATE_TICKET,)}
+REGISTRY: dict[str, Tool] = {t.name: t for t in (CREATE_TICKET, CANCEL_INVOICE)}
 
 
 def get_tool(name: str) -> Tool:
@@ -97,6 +125,7 @@ def describe(name: str) -> dict[str, Any]:
         "description": t.description,
         "method": t.method,
         "url": t.url(),
+        "risk_level": t.risk_level,
         "params": [
             {"name": p.name, "type": p.type,
              "required": p.required, "description": p.description}
@@ -105,9 +134,41 @@ def describe(name: str) -> dict[str, Any]:
     }
 
 
+def requires_approval(tool: Tool) -> bool:
+    """High-risk tools must be approved by a human before they run."""
+    return tool.risk_level == HIGH_RISK
+
+
+# Intent -> tool selection. Financial / destructive intents map to the high-risk
+# tool (which is gated behind human approval); everything else opens a ticket.
+# Conservative by design: unknown intents fall back to the low-risk create_ticket.
+_INTENT_TOOL: dict[str, str] = {
+    "billing_dispute": "cancel_invoice",
+    "cancellation": "cancel_invoice",
+    "refund_request": "cancel_invoice",
+    "invoice_cancellation": "cancel_invoice",
+}
+
+
+def select(decision: Any) -> Tool:
+    """Pick the tool for an action-routed request from its triage decision."""
+    intent = (getattr(decision, "intent", "") or "").strip().lower()
+    return get_tool(_INTENT_TOOL.get(intent, "create_ticket"))
+
+
 # --- param schemas (Pydantic) ----------------------------------------------
 
 _EMAIL_RE = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+
+
+def _clean_email(v: Optional[str]) -> Optional[str]:
+    """Normalise an optional email: empty -> None, else validate the shape."""
+    import re
+    if v is None or v == "":
+        return None
+    if not re.match(_EMAIL_RE, v):
+        raise ValueError(f"not a valid email address: {v!r}")
+    return v
 
 
 class CreateTicketParams(BaseModel):
@@ -129,16 +190,32 @@ class CreateTicketParams(BaseModel):
     @field_validator("requester_email")
     @classmethod
     def _check_email(cls, v: Optional[str]) -> Optional[str]:
-        import re
-        if v is None or v == "":
-            return None
-        if not re.match(_EMAIL_RE, v):
-            raise ValueError(f"not a valid email address: {v!r}")
-        return v
+        return _clean_email(v)
+
+
+class CancelInvoiceParams(BaseModel):
+    """Validated input for the high-risk cancel_invoice tool."""
+
+    invoice_id: str = Field(min_length=1, max_length=64)
+    requester_email: Optional[str] = None
+    reason: Optional[str] = None
+
+    @field_validator("invoice_id")
+    @classmethod
+    def _strip(cls, v: str) -> str:
+        return v.strip()
+
+    @field_validator("requester_email")
+    @classmethod
+    def _check_email(cls, v: Optional[str]) -> Optional[str]:
+        return _clean_email(v)
 
 
 # tool name -> its Pydantic param model
-PARAM_MODELS: dict[str, type[BaseModel]] = {"create_ticket": CreateTicketParams}
+PARAM_MODELS: dict[str, type[BaseModel]] = {
+    "create_ticket": CreateTicketParams,
+    "cancel_invoice": CancelInvoiceParams,
+}
 
 
 # --- invocation ------------------------------------------------------------
@@ -171,15 +248,79 @@ def _post_json(url: str, payload: dict, timeout: int) -> dict:
         return {"raw": body}
 
 
+def validate(name: str, params: dict[str, Any]) -> dict[str, Any]:
+    """Validate `params` against the tool's schema; return the JSON payload dict.
+
+    Raises pydantic.ValidationError on bad input, KeyError if the tool is unknown.
+    """
+    model = PARAM_MODELS[name]
+    return model(**params).model_dump(exclude_none=True)
+
+
 def invoke(name: str, params: dict[str, Any], *, timeout: int = 15) -> dict:
-    """Validate `params` against the tool's schema and POST them to its webhook.
+    """Validate `params` and POST them to the tool's webhook (direct execution).
 
     Returns the parsed JSON response (e.g. {"ok": true, "id": "1"}).
     Raises pydantic.ValidationError on bad params, ToolError on transport/HTTP
-    failure, KeyError if the tool is unknown.
+    failure, KeyError if the tool is unknown. Intended for low/medium-risk tools;
+    high-risk tools should go through `enqueue` instead.
     """
     tool = get_tool(name)
-    model = PARAM_MODELS[name]
-    validated = model(**params)                      # -> ValidationError on bad input
-    payload = validated.model_dump(exclude_none=True)
+    payload = validate(name, params)
     return _post_json(tool.url(), payload, timeout=timeout)
+
+
+# --- approval queue (high-risk actions) ------------------------------------
+
+def enqueue(name: str, params: dict[str, Any], *, request: str = "",
+            route: str | None = None, urgency: str | None = None,
+            reason: str | None = None, conn=None) -> int:
+    """Validate `params` and queue the action for human approval instead of
+    running it. Writes one row to `approval_queue` and returns its id.
+
+    This is the gate for high-risk tools: nothing side-effecting happens here,
+    the request is just recorded (status 'pending') for a human to approve later.
+    """
+    from psycopg.types.json import Jsonb
+
+    from . import db
+
+    tool = get_tool(name)
+    payload = validate(name, params)                 # -> ValidationError on bad input
+    own = conn is None
+    conn = conn or db.connect()
+    try:
+        cur = conn.execute(
+            """
+            INSERT INTO approval_queue
+                (tool, risk_level, params, request, route, urgency, reason)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (name, tool.risk_level, Jsonb(payload), request, route, urgency, reason),
+        )
+        return cur.fetchone()[0]
+    finally:
+        if own:
+            conn.close()
+
+
+def pending_approvals(limit: int = 20, *, conn=None) -> list[dict[str, Any]]:
+    """Most recent approval-queue rows (for `cli approvals` / a future UI)."""
+    from . import db
+
+    own = conn is None
+    conn = conn or db.connect()
+    try:
+        cur = conn.execute(
+            """
+            SELECT id, created_at, tool, risk_level, status, reason, params
+            FROM approval_queue ORDER BY id DESC LIMIT %s
+            """,
+            (limit,),
+        )
+        cols = [c.name for c in cur.description]
+        return [dict(zip(cols, r)) for r in cur.fetchall()]
+    finally:
+        if own:
+            conn.close()
