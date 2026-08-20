@@ -55,6 +55,29 @@ CREATE TABLE IF NOT EXISTS tickets (
 
 CREATE INDEX IF NOT EXISTS tickets_status_idx  ON tickets (status);
 CREATE INDEX IF NOT EXISTS tickets_created_idx ON tickets (created_at DESC);
+
+-- One row per graph run: cost + trace log (written by app/trace.py).
+CREATE TABLE IF NOT EXISTS runs (
+    id                BIGSERIAL PRIMARY KEY,
+    request           TEXT NOT NULL,
+    route             TEXT,                 -- answer | action | escalate | spam
+    reason            TEXT,                 -- final machine tag (e.g. answered)
+    escalated         BOOLEAN NOT NULL DEFAULT FALSE,
+    model             TEXT,                 -- chat model that served the run
+    llm_calls         INT   NOT NULL DEFAULT 0,   -- generative calls (router + answerer)
+    prompt_tokens     INT   NOT NULL DEFAULT 0,
+    completion_tokens INT   NOT NULL DEFAULT 0,
+    total_tokens      INT   NOT NULL DEFAULT 0,
+    cost_usd          NUMERIC(12, 6) NOT NULL DEFAULT 0,  -- 0 for local Ollama
+    latency_ms        INT,
+    citations         TEXT[],
+    action_status     TEXT,                 -- created | pending_approval | invalid
+    ticket_id         TEXT,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS runs_created_idx ON runs (created_at DESC);
+CREATE INDEX IF NOT EXISTS runs_route_idx   ON runs (route);
 """
 
 

@@ -24,7 +24,7 @@ from typing import Any, TypedDict
 from langgraph.graph import END, START, StateGraph
 from pydantic import ValidationError
 
-from . import tools
+from . import tools, trace
 from .answer import answer as rag_answer
 from .retrieve import Hit
 from .router import Decision, route as route_request
@@ -44,6 +44,8 @@ class GraphState(TypedDict, total=False):
     action: dict[str, Any]  # planned action for the approval queue (action path)
     escalated: bool         # did we hand off to a human?
     reason: str             # short machine tag for tracing / evals
+    run_id: int             # id of the persisted cost/trace row (if logged)
+    usage: dict[str, Any]   # token/cost/latency summary for this run
 
 
 # --- nodes -----------------------------------------------------------------
@@ -177,5 +179,14 @@ GRAPH = build_graph()
 
 
 def run(request: str) -> GraphState:
-    """Run the full router -> {answer|action|escalate} graph on one request."""
-    return GRAPH.invoke({"request": request})
+    """Run the full router -> {answer|action|escalate} graph on one request.
+
+    The run is wrapped in a cost/trace tracker: LLM token usage is accumulated
+    across the router + answerer calls, timed, and persisted to the `runs` table.
+    The returned state carries `usage` (summary) and `run_id` (the logged row).
+    """
+    with trace.track() as usage:
+        state: GraphState = GRAPH.invoke({"request": request})
+    state["usage"] = usage.summary()
+    state["run_id"] = trace.log_run(request, state, usage)
+    return state

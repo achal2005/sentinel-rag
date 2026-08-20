@@ -5,6 +5,7 @@
     python -m app.cli search "question"   # show hybrid retrieval hits
     python -m app.cli ask "question"      # full cited answer (or escalation)
     python -m app.cli graph "request"     # router -> answer|action|escalate
+    python -m app.cli runs [--limit N]    # recent cost/trace log rows
 """
 from __future__ import annotations
 
@@ -82,6 +83,29 @@ def cmd_graph(args) -> None:
         for h in hits:
             print(f"  - [{h.citation_id or '(no-id)'}] {h.doc} — {h.heading} "
                   f"(sim={h.similarity:.3f})")
+    u = s.get("usage") or {}
+    if u:
+        print(f"\n[cost] calls={u.get('llm_calls', 0)}  "
+              f"tokens={u.get('total_tokens', 0)} "
+              f"(in={u.get('prompt_tokens', 0)} out={u.get('completion_tokens', 0)})  "
+              f"${u.get('cost_usd', 0):.6f}  {u.get('latency_ms', 0)}ms"
+              + (f"  run_id={s['run_id']}" if s.get("run_id") else ""))
+
+
+def cmd_runs(args) -> None:
+    from . import trace
+
+    rows = trace.recent(args.limit)
+    if not rows:
+        print("No runs logged yet.")
+        return
+    print(f"{'id':>4}  {'route':<8} {'tokens':>7} {'cost$':>9} {'ms':>6}  reason")
+    for r in rows:
+        print(f"{r['id']:>4}  {str(r['route'] or '-'):<8} "
+              f"{r['total_tokens']:>7} {float(r['cost_usd']):>9.6f} "
+              f"{r['latency_ms'] or 0:>6}  {r['reason'] or ''}"
+              + ("  [escalated]" if r['escalated'] else "")
+              + (f"  ticket#{r['ticket_id']}" if r['ticket_id'] else ""))
 
 
 def main(argv=None) -> int:
@@ -109,6 +133,10 @@ def main(argv=None) -> int:
     p_graph = sub.add_parser("graph", help="router -> answer|action|escalate")
     p_graph.add_argument("query")
     p_graph.set_defaults(func=cmd_graph)
+
+    p_runs = sub.add_parser("runs", help="recent cost/trace log rows")
+    p_runs.add_argument("--limit", type=int, default=20, help="how many rows")
+    p_runs.set_defaults(func=cmd_runs)
 
     args = ap.parse_args(argv)
     args.func(args)

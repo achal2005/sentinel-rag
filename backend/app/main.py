@@ -84,6 +84,13 @@ class TriageResponse(BaseModel):
     sources: list[Source]
     action: PlannedAction | None = None
     latency_ms: int
+    # Cost / trace summary for this run (see app/trace.py).
+    run_id: int | None = None
+    llm_calls: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    cost_usd: float = 0.0
 
 
 def _sources(hits) -> list[Source]:
@@ -127,6 +134,7 @@ def handle_triage(req: TriageRequest) -> TriageResponse:
 
     decision = state.get("decision")
     action = state.get("action")
+    usage = state.get("usage") or {}
     return TriageResponse(
         query=req.query,
         route=state.get("route", "escalate"),
@@ -138,6 +146,19 @@ def handle_triage(req: TriageRequest) -> TriageResponse:
         reason=state.get("reason", ""),
         citations=state.get("citations", []),
         sources=_sources(state.get("hits") or []),
-        action=PlannedAction(**action) if action else None,
+        # The action dict holds ticket params (subject/body/...), not these fields,
+        # so build the summary from the triage decision + action status.
+        action=PlannedAction(
+            intent=decision.intent if decision else "unspecified",
+            urgency=action.get("urgency") or (decision.urgency if decision else "low"),
+            status=action.get("status", "pending"),
+            request=req.query,
+        ) if action else None,
         latency_ms=latency_ms,
+        run_id=state.get("run_id"),
+        llm_calls=usage.get("llm_calls", 0),
+        prompt_tokens=usage.get("prompt_tokens", 0),
+        completion_tokens=usage.get("completion_tokens", 0),
+        total_tokens=usage.get("total_tokens", 0),
+        cost_usd=usage.get("cost_usd", 0.0),
     )

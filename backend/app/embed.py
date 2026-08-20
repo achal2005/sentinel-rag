@@ -6,6 +6,7 @@ import urllib.error
 import urllib.request
 from typing import Iterable
 
+from . import trace
 from .config import CHAT_MODEL, EMBED_MODEL, OLLAMA_HOST
 
 
@@ -22,12 +23,15 @@ def _post(path: str, payload: dict, timeout: int = 300) -> dict:
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.load(resp)
+            data = json.load(resp)
     except urllib.error.URLError as e:  # connection refused, DNS, HTTP error
         raise OllamaError(
             f"Ollama request to {path} failed: {e}. "
             f"Is Ollama running at {OLLAMA_HOST} and the model pulled?"
         ) from e
+    # Fold token usage into the active graph run (no-op for embeddings / no run).
+    trace.record(data)
+    return data
 
 
 def embed(text: str) -> list[float]:

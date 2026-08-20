@@ -51,3 +51,11 @@ RETRIEVAL_TOPK = int(_env("RETRIEVAL_TOPK", "5"))
 RRF_K = int(_env("RRF_K", "60"))
 # Minimum cosine similarity (0..1) of the top hit; below this -> escalate.
 CONFIDENCE_MIN = float(_env("CONFIDENCE_MIN", "0.55"))
+
+# --- Cost / trace logging ---
+# Every graph run logs its token usage + latency to the `runs` table. Local
+# Ollama is free, so cost defaults to $0; set these (USD per 1M tokens) to price
+# the SAME token counts against a hypothetical hosted model for the cost table.
+COST_PER_1M_INPUT = float(_env("COST_PER_1M_INPUT", "0.0"))
+COST_PER_1M_OUTPUT = float(_env("COST_PER_1M_OUTPUT", "0.0"))
+TRACE_ENABLED = _env("TRACE_ENABLED", "1").lower() not in {"0", "false", "no", ""}
