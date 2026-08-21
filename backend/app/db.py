@@ -91,14 +91,64 @@ CREATE TABLE IF NOT EXISTS approval_queue (
     route       TEXT,
     urgency     TEXT,
     reason      TEXT,               -- machine tag (router intent)
+    run_id      BIGINT,             -- graph run (runs.id) that queued this action
     status      TEXT NOT NULL DEFAULT 'pending',  -- pending | approved | rejected | executed
     decided_by  TEXT,               -- who approved/rejected (Week 3 UI)
     decided_at  TIMESTAMPTZ,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Lightweight migration for DBs created before run_id existed (idempotent).
+ALTER TABLE approval_queue ADD COLUMN IF NOT EXISTS run_id BIGINT;
+
 CREATE INDEX IF NOT EXISTS approval_status_idx  ON approval_queue (status);
 CREATE INDEX IF NOT EXISTS approval_created_idx ON approval_queue (created_at DESC);
+CREATE INDEX IF NOT EXISTS approval_run_idx     ON approval_queue (run_id);
+
+-- Written by the n8n 'Webhook -> cancel_invoice' workflow when a high-risk
+-- invoice cancellation is APPROVED (the tool the approval queue guards).
+CREATE TABLE IF NOT EXISTS invoice_cancellations (
+    id              BIGSERIAL PRIMARY KEY,
+    invoice_id      TEXT NOT NULL,
+    requester_email TEXT,
+    reason          TEXT,
+    status          TEXT NOT NULL DEFAULT 'cancelled',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS invcancel_created_idx ON invoice_cancellations (created_at DESC);
+
+-- Idempotency ledger for tool executions (written by app/tools.py's invoke()).
+-- A duplicate request (same tool + normalized input) reuses the stored result
+-- instead of firing a second side effect -- so a retried/duplicated action does
+-- not create a second ticket. Keyed by a content hash.
+CREATE TABLE IF NOT EXISTS tool_executions (
+    id               BIGSERIAL PRIMARY KEY,
+    idempotency_key  TEXT UNIQUE NOT NULL,
+    tool             TEXT NOT NULL,
+    result           JSONB,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS tool_exec_created_idx ON tool_executions (created_at DESC);
+
+-- One row per STEP of a graph run (written by app/audit.py): the router
+-- decision, the chunk ids retrieved, the tool + params selected, and the final
+-- outcome. Also records out-of-run human decisions (approve/reject) so the
+-- approval queue has a full paper trail. Linked to runs.id / approval_queue.id.
+CREATE TABLE IF NOT EXISTS audit_log (
+    id           BIGSERIAL PRIMARY KEY,
+    run_id       BIGINT,             -- graph run this step belongs to (NULL for approvals)
+    approval_id  BIGINT,             -- approval_queue row (NULL for run steps)
+    seq          INT NOT NULL DEFAULT 0,  -- step order within a run (0,1,2,...)
+    step         TEXT NOT NULL,      -- router | retrieve | tool | outcome | approval
+    detail       JSONB NOT NULL DEFAULT '{{}}',  -- step-specific payload
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS audit_run_idx      ON audit_log (run_id);
+CREATE INDEX IF NOT EXISTS audit_approval_idx ON audit_log (approval_id);
+CREATE INDEX IF NOT EXISTS audit_created_idx  ON audit_log (created_at DESC);
 """
 
 

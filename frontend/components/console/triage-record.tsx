@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import Link from "next/link";
 import { ROUTES, routeColor } from "@/lib/routes";
 import type { TriageRecord } from "@/lib/types";
 import { RouteBadge } from "./route-badge";
@@ -86,14 +87,14 @@ export function TriageRecordCard({ record }: { record: TriageRecord }) {
               <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-action">
                 Planned action
               </span>
-              <button
-                disabled
-                title="Approval queue arrives in Week 3"
-                className="cursor-not-allowed rounded-md px-2.5 py-1 font-mono text-[11px] text-faint"
-                style={{ boxShadow: "inset 0 0 0 1px var(--color-edge)" }}
+              <Link
+                href="/approvals"
+                title="Review high-risk actions in the approval queue"
+                className="rounded-md px-2.5 py-1 font-mono text-[11px] text-action transition-colors hover:text-fg"
+                style={{ boxShadow: "inset 0 0 0 1px color-mix(in oklab, var(--color-action) 40%, transparent)" }}
               >
-                Approve — Week 3
-              </button>
+                Review in queue →
+              </Link>
             </div>
             <pre className="overflow-x-auto font-mono text-xs leading-relaxed text-dim">
               {JSON.stringify(record.action, null, 2)}

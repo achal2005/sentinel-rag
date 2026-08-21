@@ -59,3 +59,15 @@ CONFIDENCE_MIN = float(_env("CONFIDENCE_MIN", "0.55"))
 COST_PER_1M_INPUT = float(_env("COST_PER_1M_INPUT", "0.0"))
 COST_PER_1M_OUTPUT = float(_env("COST_PER_1M_OUTPUT", "0.0"))
 TRACE_ENABLED = _env("TRACE_ENABLED", "1").lower() not in {"0", "false", "no", ""}
+
+# --- Langfuse tracing (self-hosted, optional) ---
+# One rich trace per graph run (router -> chunks -> prompt -> tool -> cost),
+# sent to a self-hosted Langfuse. Disabled automatically if keys are unset or
+# the SDK/server is unavailable -- tracing never blocks the request path.
+LANGFUSE_HOST = _env("LANGFUSE_HOST", "http://localhost:3001").rstrip("/")
+LANGFUSE_PUBLIC_KEY = _env("LANGFUSE_PUBLIC_KEY", "")
+LANGFUSE_SECRET_KEY = _env("LANGFUSE_SECRET_KEY", "")
+LANGFUSE_ENABLED = (
+    _env("LANGFUSE_ENABLED", "1").lower() not in {"0", "false", "no", ""}
+    and bool(LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY)
+)

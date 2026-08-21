@@ -1,0 +1,82 @@
+{
+  "id": "webhook-cancel-invoice",
+  "name": "Webhook -> cancel_invoice",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cancel-invoice",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c2f1b2d0-0000-4000-8000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "webhookId": "c2f1b2d0-0000-4000-8000-000000000001"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "invoice_cancellations"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "invoice_id": "={{ $json.body.invoice_id }}",
+            "requester_email": "={{ $json.body.requester_email }}",
+            "reason": "={{ $json.body.reason }}"
+          },
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c2f1b2d0-0000-4000-8000-000000000002",
+      "name": "Insert cancellation",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [520, 300],
+      "credentials": {
+        "postgres": {
+          "id": "sentinel-postgres",
+          "name": "Sentinel Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"id\": $json.id } }}",
+        "options": {}
+      },
+      "id": "c2f1b2d0-0000-4000-8000-000000000003",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [780, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Insert cancellation", "type": "main", "index": 0 }]]
+    },
+    "Insert cancellation": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

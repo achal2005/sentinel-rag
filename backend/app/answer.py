@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from . import lf
 from .config import CONFIDENCE_MIN
 from .embed import chat
 from .retrieve import Hit, search
@@ -53,6 +54,17 @@ def _format_sources(hits: list[Hit]) -> str:
 def answer(query: str, conn=None) -> Answer:
     hits = search(query, conn=conn)
 
+    # Langfuse: the retrieved chunks, logged BEFORE the answer generation so the
+    # trace reads chunks -> prompt (no-op if tracing is disabled).
+    lf.span(
+        "retrieve",
+        input=query,
+        output=[h.citation_id or f"chunk:{h.id}" for h in hits],
+        chunk_ids=[h.id for h in hits],
+        headings=[h.heading for h in hits],
+        top_similarity=round(hits[0].similarity, 4) if hits else None,
+    )
+
     # Confidence gate: nothing retrieved, or top hit too weak -> escalate.
     if not hits or hits[0].similarity < CONFIDENCE_MIN:
         return Answer(
@@ -67,6 +79,7 @@ def answer(query: str, conn=None) -> Answer:
 
     sources = _format_sources(hits)
     user = f"Question:\n{query}\n\nSources:\n{sources}"
+    lf.label("answer")  # name this generation in the Langfuse trace
     raw = chat(SYSTEM, user)
 
     raw_upper = raw.strip().upper()

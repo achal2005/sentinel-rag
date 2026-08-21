@@ -6,7 +6,7 @@ import urllib.error
 import urllib.request
 from typing import Iterable
 
-from . import trace
+from . import lf, trace
 from .config import CHAT_MODEL, EMBED_MODEL, OLLAMA_HOST
 
 
@@ -31,6 +31,8 @@ def _post(path: str, payload: dict, timeout: int = 300) -> dict:
         ) from e
     # Fold token usage into the active graph run (no-op for embeddings / no run).
     trace.record(data)
+    # Mirror generative calls to Langfuse as a generation (no-op if disabled).
+    lf.record_chat(payload, data)
     return data
 
 

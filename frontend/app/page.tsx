@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { triage } from "@/lib/api";
 import type { RouteKey, TriageRecord } from "@/lib/types";
@@ -44,7 +45,12 @@ export default function Home() {
             LLM brain · n8n hands
           </span>
         </div>
-        <SystemStatus />
+        <div className="flex items-center gap-4">
+          <Link href="/approvals" className="font-mono text-xs text-dim hover:text-fg">
+            Approvals
+          </Link>
+          <SystemStatus />
+        </div>
       </header>
 
       {/* hero — lead with the interaction, not a big number */}

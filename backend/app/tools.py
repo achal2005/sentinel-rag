@@ -257,17 +257,88 @@ def validate(name: str, params: dict[str, Any]) -> dict[str, Any]:
     return model(**params).model_dump(exclude_none=True)
 
 
-def invoke(name: str, params: dict[str, Any], *, timeout: int = 15) -> dict:
+def invoke(name: str, params: dict[str, Any], *, timeout: int = 15,
+           idempotent: bool = False, request: str | None = None) -> dict:
     """Validate `params` and POST them to the tool's webhook (direct execution).
 
     Returns the parsed JSON response (e.g. {"ok": true, "id": "1"}).
     Raises pydantic.ValidationError on bad params, ToolError on transport/HTTP
     failure, KeyError if the tool is unknown. Intended for low/medium-risk tools;
     high-risk tools should go through `enqueue` instead.
+
+    When `idempotent=True`, a content hash of (tool + request/payload) is checked
+    against the `tool_executions` ledger first: a duplicate request returns the
+    prior result (tagged `idempotent_replay`) instead of firing the webhook again,
+    so a retried/duplicated action never creates a second side effect.
     """
     tool = get_tool(name)
     payload = validate(name, params)
-    return _post_json(tool.url(), payload, timeout=timeout)
+
+    key = _idempotency_key(name, request, payload) if idempotent else None
+    if key is not None:
+        prior = _idem_lookup(key)
+        if prior is not None:
+            return {**prior, "idempotent_replay": True}
+
+    result = _post_json(tool.url(), payload, timeout=timeout)
+
+    if key is not None:
+        _idem_store(key, name, result)
+    return result
+
+
+def _idempotency_key(name: str, request: str | None, payload: dict) -> str:
+    """Stable content hash identifying one logical tool call.
+
+    Prefers the originating request text (so a re-submitted request dedupes even
+    if param extraction differs slightly); falls back to the validated payload.
+    """
+    import hashlib
+
+    basis = (request or "").strip().lower() or json.dumps(payload, sort_keys=True)
+    return hashlib.sha256(f"{name}:{basis}".encode("utf-8")).hexdigest()
+
+
+def _idem_lookup(key: str, *, conn=None) -> Optional[dict]:
+    """Return the stored result for this key, or None. Never raises."""
+    from . import db
+
+    try:
+        own = conn is None
+        conn = conn or db.connect()
+        try:
+            cur = conn.execute(
+                "SELECT result FROM tool_executions WHERE idempotency_key = %s", (key,)
+            )
+            row = cur.fetchone()
+            return row[0] if row else None
+        finally:
+            if own:
+                conn.close()
+    except Exception:
+        return None  # ledger unavailable -> treat as not-seen (fail open to execute)
+
+
+def _idem_store(key: str, name: str, result: dict, *, conn=None) -> None:
+    """Record a tool execution's result under its idempotency key. Never raises."""
+    from psycopg.types.json import Jsonb
+
+    from . import db
+
+    try:
+        own = conn is None
+        conn = conn or db.connect()
+        try:
+            conn.execute(
+                "INSERT INTO tool_executions (idempotency_key, tool, result) "
+                "VALUES (%s, %s, %s) ON CONFLICT (idempotency_key) DO NOTHING",
+                (key, name, Jsonb(result)),
+            )
+        finally:
+            if own:
+                conn.close()
+    except Exception:
+        pass
 
 
 # --- approval queue (high-risk actions) ------------------------------------
@@ -305,22 +376,189 @@ def enqueue(name: str, params: dict[str, Any], *, request: str = "",
             conn.close()
 
 
-def pending_approvals(limit: int = 20, *, conn=None) -> list[dict[str, Any]]:
-    """Most recent approval-queue rows (for `cli approvals` / a future UI)."""
+_APPROVAL_COLS = (
+    "id, created_at, tool, risk_level, status, reason, request, urgency, params, "
+    "run_id, decided_by, decided_at"
+)
+
+
+def set_run_id(approval_id: int, run_id: int, *, conn=None) -> None:
+    """Link a queued approval back to the graph run that created it.
+
+    Called once the run's `runs` row exists (run_id is only assigned after the
+    graph finishes, i.e. after enqueue). Best-effort: never raises.
+    """
+    from . import db
+
+    own = conn is None
+    conn = conn or db.connect()
+    try:
+        conn.execute(
+            "UPDATE approval_queue SET run_id = %s WHERE id = %s AND run_id IS NULL",
+            (run_id, approval_id),
+        )
+    finally:
+        if own:
+            conn.close()
+
+
+class ApprovalError(RuntimeError):
+    """Base class for approval-queue state errors."""
+
+
+class ApprovalNotFound(ApprovalError):
+    """No approval_queue row with that id."""
+
+
+class ApprovalNotPending(ApprovalError):
+    """The row exists but has already been decided (not 'pending')."""
+
+
+def list_approvals(*, status: str | None = "pending", limit: int = 50,
+                   conn=None) -> list[dict[str, Any]]:
+    """Approval-queue rows, newest first. `status=None` returns every status."""
+    from . import db
+
+    own = conn is None
+    conn = conn or db.connect()
+    try:
+        if status is None:
+            cur = conn.execute(
+                f"SELECT {_APPROVAL_COLS} FROM approval_queue "
+                "ORDER BY id DESC LIMIT %s",
+                (limit,),
+            )
+        else:
+            cur = conn.execute(
+                f"SELECT {_APPROVAL_COLS} FROM approval_queue WHERE status = %s "
+                "ORDER BY id DESC LIMIT %s",
+                (status, limit),
+            )
+        cols = [c.name for c in cur.description]
+        return [dict(zip(cols, r)) for r in cur.fetchall()]
+    finally:
+        if own:
+            conn.close()
+
+
+def get_approval(approval_id: int, *, conn=None) -> Optional[dict[str, Any]]:
+    """One approval-queue row, or None if it doesn't exist."""
     from . import db
 
     own = conn is None
     conn = conn or db.connect()
     try:
         cur = conn.execute(
-            """
-            SELECT id, created_at, tool, risk_level, status, reason, params
-            FROM approval_queue ORDER BY id DESC LIMIT %s
-            """,
-            (limit,),
+            f"SELECT {_APPROVAL_COLS} FROM approval_queue WHERE id = %s",
+            (approval_id,),
         )
-        cols = [c.name for c in cur.description]
-        return [dict(zip(cols, r)) for r in cur.fetchall()]
+        row = cur.fetchone()
+        if row is None:
+            return None
+        return dict(zip([c.name for c in cur.description], row))
     finally:
         if own:
             conn.close()
+
+
+def approve(approval_id: int, *, decided_by: str = "operator", conn=None) -> dict[str, Any]:
+    """Approve a pending item and RUN its tool (fires the n8n webhook).
+
+    On success the row moves pending -> approved -> executed. If the tool call
+    fails (e.g. the n8n workflow isn't set up), the row stays 'approved' with the
+    error surfaced, so it can be retried. Raises ApprovalNotFound / NotPending.
+    """
+    from . import db
+
+    own = conn is None
+    conn = conn or db.connect()
+    try:
+        row = get_approval(approval_id, conn=conn)
+        if row is None:
+            raise ApprovalNotFound(f"approval {approval_id} not found")
+        if row["status"] != "pending":
+            raise ApprovalNotPending(
+                f"approval {approval_id} is '{row['status']}', not pending"
+            )
+        # Critic gate: re-verify the action immediately BEFORE it executes, even
+        # though a human approved it (defense in depth). A block here means the
+        # request is unsafe regardless of approval -- do not run it.
+        from . import critic
+
+        verdict = critic.review(row.get("request") or "", row["tool"], row["params"])
+        if verdict.blocked:
+            conn.execute(
+                "UPDATE approval_queue SET status='rejected', decided_by=%s, "
+                "decided_at=now() WHERE id=%s",
+                (f"critic:{verdict.category}", approval_id),
+            )
+            _audit_decision(approval_id, "blocked_by_critic", decided_by,
+                            tool=row["tool"], params=row["params"], executed=False,
+                            category=verdict.category, reason=verdict.reason,
+                            run_id=row.get("run_id"), conn=conn)
+            return {"id": approval_id, "tool": row["tool"], "status": "rejected",
+                    "executed": False, "error": f"blocked by critic: {verdict.reason}"}
+
+        # Record the human decision first.
+        conn.execute(
+            "UPDATE approval_queue SET status='approved', decided_by=%s, "
+            "decided_at=now() WHERE id=%s",
+            (decided_by, approval_id),
+        )
+        # Approving TRIGGERS the tool.
+        try:
+            result = invoke(row["tool"], row["params"])
+        except ToolError as e:
+            _audit_decision(approval_id, "approved", decided_by, tool=row["tool"],
+                            params=row["params"], executed=False, error=str(e),
+                            run_id=row.get("run_id"), conn=conn)
+            return {"id": approval_id, "tool": row["tool"], "status": "approved",
+                    "executed": False, "error": str(e)}
+        conn.execute("UPDATE approval_queue SET status='executed' WHERE id=%s",
+                     (approval_id,))
+        _audit_decision(approval_id, "approved", decided_by, tool=row["tool"],
+                        params=row["params"], executed=True,
+                        run_id=row.get("run_id"), conn=conn)
+        return {"id": approval_id, "tool": row["tool"], "status": "executed",
+                "executed": True, "result": result}
+    finally:
+        if own:
+            conn.close()
+
+
+def reject(approval_id: int, *, decided_by: str = "operator", conn=None) -> dict[str, Any]:
+    """Reject (close) a pending item without running its tool."""
+    from . import db
+
+    own = conn is None
+    conn = conn or db.connect()
+    try:
+        row = get_approval(approval_id, conn=conn)
+        if row is None:
+            raise ApprovalNotFound(f"approval {approval_id} not found")
+        if row["status"] != "pending":
+            raise ApprovalNotPending(
+                f"approval {approval_id} is '{row['status']}', not pending"
+            )
+        conn.execute(
+            "UPDATE approval_queue SET status='rejected', decided_by=%s, "
+            "decided_at=now() WHERE id=%s",
+            (decided_by, approval_id),
+        )
+        _audit_decision(approval_id, "rejected", decided_by, tool=row["tool"],
+                        params=row["params"], executed=False,
+                        run_id=row.get("run_id"), conn=conn)
+        return {"id": approval_id, "tool": row["tool"], "status": "rejected",
+                "executed": False}
+    finally:
+        if own:
+            conn.close()
+
+
+def _audit_decision(approval_id: int, decision: str, decided_by: str, *,
+                    run_id: int | None = None, conn=None, **detail: Any) -> None:
+    """Record a human approve/reject decision to the audit trail (never raises)."""
+    from . import audit
+
+    audit.event("approval", approval_id=approval_id, run_id=run_id, conn=conn,
+                decision=decision, decided_by=decided_by, **detail)

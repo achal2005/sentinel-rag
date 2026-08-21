@@ -7,6 +7,7 @@
     python -m app.cli graph "request"     # router -> answer|action|escalate
     python -m app.cli runs [--limit N]    # recent cost/trace log rows
     python -m app.cli approvals [--limit N]  # high-risk actions awaiting approval
+    python -m app.cli audit [--run N] [--limit N]  # per-step audit trail
 """
 from __future__ import annotations
 
@@ -112,7 +113,7 @@ def cmd_runs(args) -> None:
 def cmd_approvals(args) -> None:
     from . import tools
 
-    rows = tools.pending_approvals(args.limit)
+    rows = tools.list_approvals(status="pending", limit=args.limit)
     if not rows:
         print("Approval queue is empty.")
         return
@@ -120,6 +121,22 @@ def cmd_approvals(args) -> None:
     for r in rows:
         print(f"{r['id']:>4}  {r['tool']:<15} {r['risk_level']:<6} "
               f"{r['status']:<10} {r['reason'] or ''}   params={r['params']}")
+
+
+def cmd_audit(args) -> None:
+    from . import audit
+
+    rows = audit.for_run(args.run) if args.run else audit.recent(args.limit)
+    if not rows:
+        print("No audit steps logged yet." if not args.run
+              else f"No audit steps for run #{args.run}.")
+        return
+    header = f"audit trail for run #{args.run}" if args.run else "recent audit steps"
+    print(header)
+    for r in rows:
+        run_tag = f"run#{r['run_id']}" if r.get("run_id") else (
+            f"appr#{r['approval_id']}" if r.get("approval_id") else "-")
+        print(f"  {run_tag:>8} [{r.get('seq', 0):>2}] {r['step']:<9} {r['detail']}")
 
 
 def main(argv=None) -> int:
@@ -155,6 +172,11 @@ def main(argv=None) -> int:
     p_appr = sub.add_parser("approvals", help="high-risk actions awaiting approval")
     p_appr.add_argument("--limit", type=int, default=20, help="how many rows")
     p_appr.set_defaults(func=cmd_approvals)
+
+    p_audit = sub.add_parser("audit", help="per-step audit trail")
+    p_audit.add_argument("--run", type=int, help="show steps for one run id")
+    p_audit.add_argument("--limit", type=int, default=20, help="how many rows")
+    p_audit.set_defaults(func=cmd_audit)
 
     args = ap.parse_args(argv)
     args.func(args)

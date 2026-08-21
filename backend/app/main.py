@@ -9,11 +9,14 @@ Exposes two POST endpoints:
 from __future__ import annotations
 
 import time
+from datetime import datetime
+from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from . import tools
 from .answer import answer
 from .graph import run as run_graph
 
@@ -123,6 +126,79 @@ def handle_ask(req: AskRequest) -> AskResponse:
         reason=ans.reason,
         sources=_sources(ans.hits),
     )
+
+
+# --- approval queue (Week 3 safety) ----------------------------------------
+
+class ApprovalItem(BaseModel):
+    id: int
+    created_at: datetime
+    tool: str
+    risk_level: str
+    status: str
+    reason: str | None = None
+    request: str | None = None
+    urgency: str | None = None
+    run_id: int | None = None
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
+class ApprovalDecision(BaseModel):
+    decided_by: str = Field("operator", description="Who approved/rejected")
+
+
+class ApprovalActionResult(BaseModel):
+    id: int
+    tool: str | None = None
+    status: str
+    executed: bool = False
+    error: str | None = None
+
+
+@app.get("/approvals", response_model=list[ApprovalItem])
+def list_approvals(status: str = "pending", limit: int = 50) -> list[ApprovalItem]:
+    """High-risk actions parked in the approval queue. `status=all` for every row."""
+    rows = tools.list_approvals(
+        status=None if status == "all" else status, limit=limit
+    )
+    return [ApprovalItem(**r) for r in rows]
+
+
+@app.post("/approvals/{approval_id}/approve", response_model=ApprovalActionResult)
+def approve_approval(
+    approval_id: int, body: ApprovalDecision | None = None
+) -> ApprovalActionResult:
+    """Approve a queued action — this TRIGGERS its tool (fires the n8n webhook)."""
+    who = body.decided_by if body else "operator"
+    try:
+        result = tools.approve(approval_id, decided_by=who)
+    except tools.ApprovalNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except tools.ApprovalNotPending as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    return ApprovalActionResult(**result)
+
+
+@app.post("/approvals/{approval_id}/reject", response_model=ApprovalActionResult)
+def reject_approval(
+    approval_id: int, body: ApprovalDecision | None = None
+) -> ApprovalActionResult:
+    """Reject (close) a queued action without running its tool."""
+    who = body.decided_by if body else "operator"
+    try:
+        result = tools.reject(approval_id, decided_by=who)
+    except tools.ApprovalNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except tools.ApprovalNotPending as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    return ApprovalActionResult(**result)
+
+
+@app.get("/runs/{run_id}/audit")
+def run_audit(run_id: int) -> list[dict[str, Any]]:
+    """The per-step audit trail for one graph run (router → retrieve/tool → outcome)."""
+    from . import audit
+    return audit.for_run(run_id)
 
 
 @app.post("/triage", response_model=TriageResponse)
