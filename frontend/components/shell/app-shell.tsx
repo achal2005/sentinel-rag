@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { fetchApprovals } from "@/lib/api";
 import { SystemStatus } from "@/components/console/system-status";
+import { SentinelMark as BrandMark } from "@/components/brand/sentinel-logo";
 
 /* ---- nav model ------------------------------------------------------- */
 
@@ -132,7 +133,11 @@ function Brand() {
 }
 
 function SentinelMark() {
-  return <span className="sentinel-mark size-8 shrink-0" aria-hidden><span /></span>;
+  return (
+    <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-edge bg-surface text-brand">
+      <BrandMark className="size-5" />
+    </span>
+  );
 }
 
 /* ---- nav pieces ------------------------------------------------------ */

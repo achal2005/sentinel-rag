@@ -36,8 +36,11 @@ const urgencyColor = (u: string) =>
   u === "high" ? "var(--color-escalate)" : u === "medium" ? "var(--color-action)" : "var(--color-dim)";
 
 export function TriageRecordCard({ record }: { record: TriageRecord }) {
-  const c = routeColor(record.route);
-  const meta = ROUTES[record.route];
+  // The answer path can self-escalate (e.g. it couldn't ground a citation), so
+  // the badge must reflect the FINAL decision, not just the router's route.
+  const displayRoute = record.escalated ? "escalate" : record.route;
+  const c = routeColor(displayRoute);
+  const meta = ROUTES[displayRoute];
 
   return (
     <article
@@ -58,7 +61,7 @@ export function TriageRecordCard({ record }: { record: TriageRecord }) {
 
         {/* decision header */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <RouteBadge route={record.route} />
+          <RouteBadge route={displayRoute} />
           <Meta label="urgency" value={record.urgency} color={urgencyColor(record.urgency)} />
           <Meta label="intent" value={record.intent} />
           <Meta label="reason" value={record.reason} />

@@ -126,7 +126,24 @@ def answer(query: str, conn=None) -> Answer:
     sources = _format_sources(hits)
     user = f"Question:\n{query}\n\nSources:\n{sources}"
     lf.label("answer")  # name this generation in the Langfuse trace
-    raw = _finish_at_sources_line(chat(SYSTEM, user))
+    try:
+        raw = _finish_at_sources_line(chat(SYSTEM, user))
+    except ModelProviderError as exc:
+        # The generation model being unavailable or rate-limited (e.g. a Gemini
+        # 429/500) must fail closed to a human handoff -- never a 500 to the
+        # caller, and never a fabricated, uncited answer.
+        log.warning("answer generation model unavailable; escalating: %s", exc)
+        return Answer(
+            query=query,
+            text=(
+                "I can't reach the answer model right now, so I can't verify an "
+                f"answer against the {PRODUCT_NAME} docs. I'm escalating this to a human."
+            ),
+            escalated=True,
+            citations=[],
+            hits=hits,
+            reason="answer_model_unavailable",
+        )
 
     raw_upper = raw.strip().upper()
     if (

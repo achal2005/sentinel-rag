@@ -59,9 +59,9 @@
 
 :root,
 .dark {
-  --type-display: "Aptos Display", "Segoe UI Variable Display", "Segoe UI", sans-serif;
-  --type-sans: "Segoe UI Variable Text", "Aptos", "Segoe UI", sans-serif;
-  --type-mono: "Cascadia Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  --type-display: var(--font-instrument), Georgia, "Times New Roman", serif;
+  --type-sans: var(--font-geist), "Segoe UI", system-ui, sans-serif;
+  --type-mono: var(--font-geist-mono), "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
   --radius: 0.45rem;
   --background: #07100f;
   --foreground: #edf7f3;
@@ -154,6 +154,92 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--color-faint);
+}
+
+/* ── Redesigned landing system (v2) ─────────────────────────────── */
+.nav-link {
+  font-size: 13px;
+  color: var(--color-dim);
+  transition: color 160ms ease;
+}
+.nav-link:hover { color: var(--color-fg); }
+
+.beacon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 0.6rem;
+  border: 1px solid transparent;
+  background: var(--color-brand);
+  color: #04140f;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-brand) 30%, transparent),
+    0 14px 34px -20px var(--color-brand);
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+.beacon-btn:hover {
+  transform: translateY(-1px);
+  background: #a4ead8;
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-brand) 45%, transparent),
+    0 18px 40px -18px var(--color-brand);
+}
+.beacon-btn:active { transform: translateY(0); }
+
+.ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--color-edge);
+  background: color-mix(in oklab, var(--color-surface) 55%, transparent);
+  color: var(--color-fg);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+.ghost-btn:hover {
+  border-color: var(--color-edge-strong);
+  background: var(--color-surface-2);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-edge);
+  background: color-mix(in oklab, var(--color-surface) 60%, transparent);
+  backdrop-filter: blur(6px);
+  font-family: var(--type-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-dim);
+}
+
+.outcome-card {
+  position: relative;
+  overflow: hidden;
+  padding: 1.35rem;
+  border: 1px solid var(--color-edge);
+  border-radius: 0.9rem;
+  background: color-mix(in oklab, var(--color-surface) 45%, transparent);
+  transition: transform 200ms ease, border-color 200ms ease, background 200ms ease;
+}
+.outcome-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--color-edge-strong);
+  background: var(--color-surface-2);
 }
 
 /* Shared product surfaces: crisp paper-like layers rather than soft bubbles. */
