@@ -20,7 +20,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from .config import _env
+from .config import TOOLS_SIMULATE, _env
 
 
 @dataclass(frozen=True)
@@ -309,7 +309,17 @@ def invoke(name: str, params: dict[str, Any], *, timeout: int = 15,
         if prior is not None:
             return {**prior, "idempotent_replay": True}
 
-    result = _post_json(tool.url(), payload, timeout=timeout)
+    if TOOLS_SIMULATE:
+        # Demo/public mode: record success without a real n8n side effect.
+        import uuid
+
+        result: dict[str, Any] = {
+            "ok": True,
+            "id": f"sim-{uuid.uuid4().hex[:8]}",
+            "simulated": True,
+        }
+    else:
+        result = _post_json(tool.url(), payload, timeout=timeout)
 
     if key is not None:
         _idem_store(key, name, result)

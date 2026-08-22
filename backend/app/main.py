@@ -12,20 +12,29 @@ import time
 from datetime import datetime
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+import base64
+import secrets
+
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from . import tools
 from .answer import answer
 from .config import (
+    AUTH_ENABLED,
+    BASIC_AUTH_PASS,
+    BASIC_AUTH_USER,
     CHAT_MODEL,
     CONFIDENCE_MIN,
+    CORS_ORIGINS,
     EMBED_MODEL,
     EMBED_PROVIDER,
     LANGFUSE_ENABLED,
     LLM_PROVIDER,
     RETRIEVAL_TOPK,
+    TOOLS_SIMULATE,
     TRACE_ENABLED,
 )
 from .graph import run as run_graph
@@ -39,10 +48,47 @@ app = FastAPI(
 # The Next.js console talks to us over HTTP (direct, or via its proxy route).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Endpoints reachable without credentials even when Basic auth is on: liveness
+# and the interactive docs. Everything else requires the configured pair.
+_AUTH_EXEMPT = {"/health", "/docs", "/openapi.json", "/redoc"}
+
+
+@app.middleware("http")
+async def basic_auth(request: Request, call_next):
+    """Gate the API behind HTTP Basic auth when BASIC_AUTH_* are configured.
+
+    No-op in local dev (creds unset). Preflight OPTIONS is always allowed so CORS
+    still works. Credentials are compared with `secrets.compare_digest`.
+    """
+    if (
+        AUTH_ENABLED
+        and request.method != "OPTIONS"
+        and request.url.path not in _AUTH_EXEMPT
+    ):
+        header = request.headers.get("authorization", "")
+        scheme, _, encoded = header.partition(" ")
+        ok = False
+        if scheme.lower() == "basic" and encoded:
+            try:
+                user, _, pw = base64.b64decode(encoded).decode("utf-8").partition(":")
+                ok = secrets.compare_digest(user, BASIC_AUTH_USER) and secrets.compare_digest(
+                    pw, BASIC_AUTH_PASS
+                )
+            except Exception:
+                ok = False
+        if not ok:
+            return Response(
+                "Authentication required.",
+                status_code=401,
+                headers={"WWW-Authenticate": 'Basic realm="Sentinel"'},
+            )
+    return await call_next(request)
 
 
 # --- shared models ---------------------------------------------------------

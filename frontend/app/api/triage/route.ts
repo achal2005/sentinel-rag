@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { backendAuthHeader } from "@/lib/server/auth";
 
 const API = process.env.SENTINEL_API_URL ?? "http://localhost:8000";
 
@@ -7,7 +8,7 @@ export async function POST(req: Request) {
   try {
     const upstream = await fetch(`${API}/triage`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...backendAuthHeader() },
       body,
     });
     const data = await upstream.text();

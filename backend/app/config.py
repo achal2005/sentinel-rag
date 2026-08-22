@@ -86,3 +86,29 @@ LANGFUSE_ENABLED = (
     _env("LANGFUSE_ENABLED", "1").lower() not in {"0", "false", "no", ""}
     and bool(LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY)
 )
+
+# --- Deployment safety ---
+# Browser origins allowed to call the API directly (CORS). Comma-separated; in a
+# hosted deploy set CORS_ALLOW_ORIGINS to the console's public origin. The Next.js
+# proxy is server-to-server and unaffected by CORS.
+CORS_ORIGINS = [
+    o.strip()
+    for o in _env(
+        "CORS_ALLOW_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+    ).split(",")
+    if o.strip()
+]
+
+
+# HTTP Basic auth on the API. Unset creds => auth disabled (local dev). When both
+# are set, every endpoint except health/docs requires the credentials; the Next.js
+# proxy sends the same pair so the console keeps working end to end.
+BASIC_AUTH_USER = _env("BASIC_AUTH_USER", "")
+BASIC_AUTH_PASS = _env("BASIC_AUTH_PASS", "")
+AUTH_ENABLED = bool(BASIC_AUTH_USER and BASIC_AUTH_PASS)
+
+# Simulate tool execution instead of calling real n8n webhooks. Intended for a
+# public demo: approvals still record and return success, but no real side effect
+# (invoice cancellation, ticket row) is produced. Off by default so local/prod
+# with a real n8n behaves normally.
+TOOLS_SIMULATE = _env("TOOLS_SIMULATE", "0").lower() not in {"0", "false", "no", ""}

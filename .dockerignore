@@ -1,0 +1,18 @@
+# Build context is the repo root; keep images small and reproducible.
+.git
+**/.venv
+**/node_modules
+**/.next
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+.env
+.env.*
+!.env.example
+frontend/artifacts
+assets/demo/*.jpg
+assets/demo/*.gif
+*.png
+# The frontend image needs only the latest eval report, not the whole history.
+evals/reports/**
+!evals/reports/latest.json

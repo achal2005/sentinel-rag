@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { backendAuthHeader } from "@/lib/server/auth";
 
 const API = process.env.SENTINEL_API_URL ?? "http://localhost:8000";
 
@@ -8,6 +9,7 @@ export async function GET(req: Request) {
   try {
     const upstream = await fetch(`${API}/runs?limit=${encodeURIComponent(limit)}`, {
       cache: "no-store",
+      headers: { ...backendAuthHeader() },
     });
     const data = await upstream.text();
     return new NextResponse(data, {
