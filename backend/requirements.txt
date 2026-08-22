@@ -13,3 +13,5 @@ pydantic>=2
 # Week 3 observability: one rich trace per run to a self-hosted Langfuse.
 # Pin to the v2 SDK to match the self-hosted langfuse:2 server in docker-compose.
 langfuse>=2,<3
+# Golden evaluation suite + CI integration.
+pytest>=8

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from . import db
 from .answer import answer
@@ -27,7 +28,7 @@ def cmd_init(_args) -> None:
 
 
 def cmd_ingest(args) -> None:
-    ingest(reset=args.reset)
+    ingest(reset=args.reset, docs_dir=args.docs_dir)
 
 
 def cmd_search(args) -> None:
@@ -147,6 +148,12 @@ def main(argv=None) -> int:
 
     p_ing = sub.add_parser("ingest", help="load docs/ into pgvector")
     p_ing.add_argument("--reset", action="store_true", help="truncate first")
+    p_ing.add_argument(
+        "--docs-dir",
+        type=Path,
+        default=None,
+        help="load Markdown files from this directory instead of docs/",
+    )
     p_ing.set_defaults(func=cmd_ingest)
 
     p_search = sub.add_parser("search", help="show retrieval hits")

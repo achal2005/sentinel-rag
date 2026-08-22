@@ -13,7 +13,7 @@ and the trace aggregates token usage / cost across both generations. That's the
 
 How it's wired (minimal, no new call graph):
 - `start()` opens a trace for the run and stashes it in a ContextVar.
-- Both LLM calls go through Ollama's single `_post` chokepoint, which calls
+- Both LLM calls go through the provider-neutral `_post` chokepoint, which calls
   `record_chat()`. A ContextVar `label` (set by the router / answerer just
   before their call) names the generation, so we don't thread anything through.
 - `span()` records the retrieval and tool steps (called where the data lives).
@@ -91,9 +91,9 @@ def label(name: str) -> None:
 
 
 def record_chat(payload: dict, data: dict) -> None:
-    """Log one Ollama chat call as a generation on the active trace.
+    """Log one normalized model chat call as a generation on the active trace.
 
-    Called from embed._post after every Ollama response. No-ops when no trace is
+    Called from embed._post after every normalized provider response. No-ops when no trace is
     active or the response has no token counts (i.e. it was an embedding call).
     """
     tr = _trace.get()

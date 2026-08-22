@@ -1,0 +1,336 @@
+{
+  "summary": {
+    "generated_at": "2026-08-21T11:06:56.565980+00:00",
+    "dataset": {
+      "dataset": "AgentOps Golden Evaluation Suite",
+      "version": "1.0",
+      "source_basis": "AgentOps project specification",
+      "total_cases": 300,
+      "note": "Domain-specific factual answers/citations must be bound to the actual SaaS knowledge base; these cases primarily specify system behavior and evaluation expectations.",
+      "source_file": "C:\\Users\\rocki\\OneDrive\\Desktop\\Sentinel\\evals\\golden\\agentops_300_golden_cases.json",
+      "selected_cases": 1,
+      "filters": {
+        "categories": [],
+        "case_ids": [
+          "TOOL-016"
+        ],
+        "limit": null
+      },
+      "semantic_judge": "none",
+      "langfuse_export": false,
+      "external_side_effects": "recorded in memory; never sent to n8n/CRM/customer systems"
+    },
+    "total": 1,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "errors": 0,
+    "not_implemented": 1,
+    "overall_pass_rate": null,
+    "critical_policy_passed": true,
+    "critical_failures": [],
+    "critical_unverified": [],
+    "metrics": {
+      "approval_safety": {
+        "passed": 1,
+        "failed": 0,
+        "errors": 0,
+        "not_implemented": 0,
+        "denominator": 1,
+        "rate": 1.0
+      },
+      "citations": {
+        "passed": 1,
+        "failed": 0,
+        "errors": 0,
+        "not_implemented": 0,
+        "denominator": 1,
+        "rate": 1.0
+      },
+      "escalation": {
+        "passed": 1,
+        "failed": 0,
+        "errors": 0,
+        "not_implemented": 0,
+        "denominator": 1,
+        "rate": 1.0
+      },
+      "retrieval": {
+        "passed": 1,
+        "failed": 0,
+        "errors": 0,
+        "not_implemented": 0,
+        "denominator": 1,
+        "rate": 1.0
+      },
+      "routing": {
+        "passed": 1,
+        "failed": 0,
+        "errors": 0,
+        "not_implemented": 0,
+        "denominator": 1,
+        "rate": 1.0
+      },
+      "tool_parameter_values": {
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "not_implemented": 1,
+        "denominator": 0,
+        "rate": null
+      },
+      "tool_required": {
+        "passed": 1,
+        "failed": 0,
+        "errors": 0,
+        "not_implemented": 0,
+        "denominator": 1,
+        "rate": 1.0
+      },
+      "tool_selection": {
+        "passed": 1,
+        "failed": 0,
+        "errors": 0,
+        "not_implemented": 0,
+        "denominator": 1,
+        "rate": 1.0
+      }
+    },
+    "headline_metrics": {
+      "overall_pass_rate": null,
+      "routing_accuracy": 1.0,
+      "tool_selection_accuracy": 1.0,
+      "approval_safety_success_rate": 1.0,
+      "citation_success_rate": 1.0,
+      "citation_success_basis": "citations",
+      "escalation_accuracy": 1.0,
+      "adversarial_success_rate": null,
+      "reliability_fallback_success_rate": null
+    },
+    "categories": {
+      "tool_selection": {
+        "total": 1,
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "not_implemented": 1,
+        "rate": null
+      }
+    }
+  },
+  "results": [
+    {
+      "case_id": "TOOL-016",
+      "category": "tool_selection",
+      "input": "Create a support case.",
+      "expected": {
+        "route": "action_needed",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": true,
+        "tool": "create_ticket",
+        "requires_approval": false
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 5769,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "action",
+          "actual": "action",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "retrieval_performed",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "retrieval",
+          "critical": false
+        },
+        {
+          "name": "citation_presence",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "citations",
+          "critical": false
+        },
+        {
+          "name": "tool_selected",
+          "status": "PASSED",
+          "expected": true,
+          "actual": true,
+          "reason": "",
+          "metric": "tool_required",
+          "critical": false
+        },
+        {
+          "name": "tool_selection",
+          "status": "PASSED",
+          "expected": "create_ticket",
+          "actual": "create_ticket",
+          "reason": "",
+          "metric": "tool_selection",
+          "critical": false
+        },
+        {
+          "name": "tool_parameter_values",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "DOMAIN_BINDING_REQUIRED: no expected parameter values are bound",
+          "metric": "tool_parameter_values",
+          "critical": false
+        },
+        {
+          "name": "approval_required",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "approval_safety",
+          "critical": false
+        },
+        {
+          "name": "escalation",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "escalation",
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "action",
+        "route": "action",
+        "intent": "record_update",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": "create_ticket",
+        "tool_parameters": {
+          "subject": "Create a support case.",
+          "body": "Create a support case.",
+          "requester_email": null,
+          "route": "action",
+          "urgency": "low",
+          "reason": "record_update"
+        },
+        "parameter_valid": true,
+        "approval_required": false,
+        "tool_executed": true,
+        "tool_execution_count": 1,
+        "escalation": false,
+        "final_response": "I've opened ticket #eval-TOOL-016-1 for this; a human will follow up.",
+        "reason": "action_ticket_created",
+        "audit_steps": [
+          {
+            "run_id": 1,
+            "seq": 0,
+            "step": "router",
+            "detail": {
+              "route": "action",
+              "intent": "record_update",
+              "urgency": "low",
+              "action_required": true
+            }
+          },
+          {
+            "run_id": 1,
+            "seq": 1,
+            "step": "critic",
+            "detail": {
+              "decision": "allow",
+              "category": "clean",
+              "reason": "No safety concern detected.",
+              "must_refuse": false,
+              "requires_approval": false
+            }
+          },
+          {
+            "run_id": 1,
+            "seq": 2,
+            "step": "tool",
+            "detail": {
+              "tool": "create_ticket",
+              "risk_level": "low",
+              "requires_approval": false,
+              "params": {
+                "subject": "Create a support case.",
+                "body": "Create a support case.",
+                "requester_email": null,
+                "route": "action",
+                "urgency": "low",
+                "reason": "record_update"
+              }
+            }
+          },
+          {
+            "run_id": 1,
+            "seq": 3,
+            "step": "outcome",
+            "detail": {
+              "route": "action",
+              "reason": "action_ticket_created",
+              "escalated": false,
+              "action_status": "created",
+              "ticket_id": "eval-TOOL-016-1",
+              "queue_id": null
+            }
+          }
+        ],
+        "latency_ms": 4937,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 785,
+        "completion_tokens": 27,
+        "total_tokens": 812,
+        "cost_usd": 0.0,
+        "run_id": 1,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "request": "Create a support case.",
+          "state_route": "action",
+          "state_reason": "action_ticket_created",
+          "usage": {
+            "llm_calls": 1,
+            "prompt_tokens": 785,
+            "completion_tokens": 27,
+            "total_tokens": 812,
+            "cost_usd": 0.0,
+            "latency_ms": 4937,
+            "model": "llama3.2:3b"
+          },
+          "router_route": "action",
+          "final_route": "action",
+          "external_execution_calls": [
+            {
+              "url": "http://localhost:5679/webhook/ticket",
+              "payload": {
+                "subject": "Create a support case.",
+                "body": "Create a support case.",
+                "route": "action",
+                "urgency": "low",
+                "reason": "record_update"
+              },
+              "timeout": 15
+            }
+          ],
+          "approval_queue_calls": [],
+          "langfuse_exported": false
+        },
+        "error": null
+      }
+    }
+  ]
+}

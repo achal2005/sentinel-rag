@@ -1,24 +1,21 @@
 import type { Source } from "@/lib/types";
 
-// Mirrors backend CONFIDENCE_MIN: top-hit similarity below this -> escalate.
-const CONFIDENCE_MIN = 0.55;
-
 /**
  * Retrieved chunks with similarity bars — the confidence gate made visible.
  * The dashed marker sits at the escalation threshold, so you can see why a
  * request was grounded or handed off.
  */
-export function EvidenceList({ sources }: { sources: Source[] }) {
+export function EvidenceList({ sources, confidenceMin }: { sources: Source[]; confidenceMin: number }) {
   if (sources.length === 0) return null;
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.18em] text-faint">
         <span>Evidence · retrieved chunks</span>
-        <span>gate ≥ {CONFIDENCE_MIN}</span>
+        <span>gate ≥ {confidenceMin.toFixed(2)}</span>
       </div>
       <ul className="space-y-2">
         {sources.map((s, i) => {
-          const passes = s.similarity >= CONFIDENCE_MIN;
+          const passes = s.similarity >= confidenceMin;
           const c = passes ? "var(--color-answer)" : "var(--color-faint)";
           return (
             <li key={i} className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
@@ -46,7 +43,7 @@ export function EvidenceList({ sources }: { sources: Source[] }) {
                   />
                   <div
                     className="absolute inset-y-0 w-px bg-edge-strong"
-                    style={{ left: `${CONFIDENCE_MIN * 100}%` }}
+                    style={{ left: `${confidenceMin * 100}%` }}
                   />
                 </div>
                 <span className="w-9 text-right font-mono text-xs text-dim">

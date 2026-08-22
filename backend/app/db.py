@@ -3,14 +3,33 @@ and cast with ::vector, so no extra adapter package is needed."""
 from __future__ import annotations
 
 from typing import Sequence
+from urllib.parse import urlsplit
 
 import psycopg
 
-from .config import DATABASE_URL, EMBED_DIM
+from .config import DATABASE_URL, DB_CONNECT_TIMEOUT, EMBED_DIM
+
+
+# libpq applies connect_timeout to every resolved address.  On many machines
+# ``localhost`` resolves to both ::1 and 127.0.0.1, doubling an outage wait.
+# Pin only the local-development hostname to one loopback address; explicit
+# remote/container hosts keep their configured DNS behavior.
+DB_HOSTADDR = (
+    "127.0.0.1" if urlsplit(DATABASE_URL).hostname == "localhost" else None
+)
 
 
 def connect() -> psycopg.Connection:
-    return psycopg.connect(DATABASE_URL, autocommit=True)
+    # Fail quickly when the local database is offline.  Evaluation and request
+    # paths can then report an infrastructure error instead of hanging for the
+    # operating system's multi-minute TCP timeout.
+    kwargs = {
+        "autocommit": True,
+        "connect_timeout": DB_CONNECT_TIMEOUT,
+    }
+    if DB_HOSTADDR:
+        kwargs["hostaddr"] = DB_HOSTADDR
+    return psycopg.connect(DATABASE_URL, **kwargs)
 
 
 def to_vector_literal(vec: Sequence[float]) -> str:
@@ -60,6 +79,8 @@ CREATE INDEX IF NOT EXISTS tickets_created_idx ON tickets (created_at DESC);
 CREATE TABLE IF NOT EXISTS runs (
     id                BIGSERIAL PRIMARY KEY,
     request           TEXT NOT NULL,
+    channel           TEXT,                 -- email | whatsapp | web_form
+    sender            TEXT,                 -- who sent it (NULL for the web console)
     route             TEXT,                 -- answer | action | escalate | spam
     reason            TEXT,                 -- final machine tag (e.g. answered)
     escalated         BOOLEAN NOT NULL DEFAULT FALSE,
@@ -71,7 +92,7 @@ CREATE TABLE IF NOT EXISTS runs (
     cost_usd          NUMERIC(12, 6) NOT NULL DEFAULT 0,  -- 0 for local Ollama
     latency_ms        INT,
     citations         TEXT[],
-    action_status     TEXT,                 -- created | pending_approval | invalid
+    action_status     TEXT,                 -- created | pending_approval | failed | invalid | blocked
     ticket_id         TEXT,
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -100,6 +121,10 @@ CREATE TABLE IF NOT EXISTS approval_queue (
 
 -- Lightweight migration for DBs created before run_id existed (idempotent).
 ALTER TABLE approval_queue ADD COLUMN IF NOT EXISTS run_id BIGINT;
+
+-- Lightweight migrations for the Inbox: channel + sender on runs (idempotent).
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS channel TEXT;
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS sender  TEXT;
 
 CREATE INDEX IF NOT EXISTS approval_status_idx  ON approval_queue (status);
 CREATE INDEX IF NOT EXISTS approval_created_idx ON approval_queue (created_at DESC);

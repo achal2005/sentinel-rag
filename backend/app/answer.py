@@ -6,24 +6,37 @@ answer must cite section ids like [key-06].
 """
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 
+from psycopg import Error as PostgresError
+
 from . import lf
-from .config import CONFIDENCE_MIN
-from .embed import chat
+from .config import CONFIDENCE_MIN, PRODUCT_NAME
+from .embed import ModelProviderError, chat
 from .retrieve import Hit, search
 
 CITATION_TOKEN = re.compile(r"\[([a-z]+-\d+)\]")
 ESCALATE_MARKER = "ESCALATE"
+log = logging.getLogger("sentinel.answer")
 
 SYSTEM = (
-    "You are Meridian's support assistant. Answer ONLY using the SOURCES provided by "
+    f"You are {PRODUCT_NAME}'s support assistant. Answer ONLY using the SOURCES provided by "
     "the user. Each source begins with an id in square brackets, e.g. [key-06].\n\n"
     "Citation rules (MANDATORY):\n"
     "- After every factual sentence, cite the id(s) it came from in square brackets, "
     "e.g. 'Rotate the key under Settings -> API Keys [key-06].'\n"
     "- Use ONLY ids that appear in the SOURCES. Never invent an id, URL, price, or step.\n"
+    "- Use the smallest sufficient source set. Do not cite a retrieved source unless it "
+    "directly supports a claim in your answer.\n"
+    "- State operational conditions in direct if/then form. Avoid ambiguous 'unless' "
+    "constructions that can reverse the documented outcome.\n"
+    "- Match each condition in the question to the rule for that exact condition. Do not "
+    "substitute a different caveat or exception from another source.\n"
+    "- Answer every part of the question explicitly before adding optional context.\n"
+    "- The final Sources line must list only ids cited in the answer body. Do not append "
+    "notes or commentary after that line.\n"
     "- Finish with a line: 'Sources: [id], [id]' listing every id you used.\n"
     f"- If the SOURCES do not contain the answer, reply with exactly {ESCALATE_MARKER} "
     "and nothing else.\n\n"
@@ -51,8 +64,41 @@ def _format_sources(hits: list[Hit]) -> str:
     return "\n\n---\n\n".join(blocks)
 
 
+def _finish_at_sources_line(text: str) -> str:
+    """Enforce the prompt contract that ``Sources:`` is the final line.
+
+    Small local models occasionally append a postscript that names retrieved
+    IDs they deliberately did *not* use.  Counting those tokens as citations
+    makes irrelevant references look grounded.  Keep the first explicit source
+    list and discard anything after it.
+    """
+    lines = text.strip().splitlines()
+    for index, line in enumerate(lines):
+        if re.match(r"^\s*(?:\*\*)?sources(?:\*\*)?\s*:", line, re.I):
+            return "\n".join(lines[: index + 1]).strip()
+    return text.strip()
+
+
 def answer(query: str, conn=None) -> Answer:
-    hits = search(query, conn=conn)
+    try:
+        hits = search(query, conn=conn)
+    except (PostgresError, ModelProviderError, OSError) as exc:
+        # Retrieval depends on both Postgres and Ollama embeddings.  Either
+        # dependency being unavailable must fail closed: return a safe human
+        # handoff rather than bubbling a 500 or fabricating an uncited answer.
+        log.warning("retrieval dependency unavailable; escalating: %s", exc)
+        return Answer(
+            query=query,
+            text=(
+                "I can't reach the retrieval services right now, so I can't "
+                f"verify an answer against the {PRODUCT_NAME} docs. I'm escalating "
+                "this to a human."
+            ),
+            escalated=True,
+            citations=[],
+            hits=[],
+            reason="retrieval_dependency_unavailable",
+        )
 
     # Langfuse: the retrieved chunks, logged BEFORE the answer generation so the
     # trace reads chunks -> prompt (no-op if tracing is disabled).
@@ -69,7 +115,7 @@ def answer(query: str, conn=None) -> Answer:
     if not hits or hits[0].similarity < CONFIDENCE_MIN:
         return Answer(
             query=query,
-            text="I don't have enough information in the Meridian docs to answer "
+            text=f"I don't have enough information in the {PRODUCT_NAME} docs to answer "
             "this confidently, so I'm escalating it to a human.",
             escalated=True,
             citations=[],
@@ -80,7 +126,7 @@ def answer(query: str, conn=None) -> Answer:
     sources = _format_sources(hits)
     user = f"Question:\n{query}\n\nSources:\n{sources}"
     lf.label("answer")  # name this generation in the Langfuse trace
-    raw = chat(SYSTEM, user)
+    raw = _finish_at_sources_line(chat(SYSTEM, user))
 
     raw_upper = raw.strip().upper()
     if (
@@ -93,7 +139,7 @@ def answer(query: str, conn=None) -> Answer:
     ):
         return Answer(
             query=query,
-            text="I couldn't ground an answer in the Meridian docs, so I'm "
+            text=f"I couldn't ground an answer in the {PRODUCT_NAME} docs, so I'm "
             "escalating it to a human.",
             escalated=True,
             citations=[],

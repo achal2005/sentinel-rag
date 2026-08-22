@@ -1,0 +1,119 @@
+{
+  "summary": {
+    "generated_at": "2026-08-21T10:05:38.400202+00:00",
+    "dataset": {
+      "dataset": "AgentOps Golden Evaluation Suite",
+      "version": "1.0",
+      "source_basis": "AgentOps project specification",
+      "total_cases": 300,
+      "note": "Domain-specific factual answers/citations must be bound to the actual SaaS knowledge base; these cases primarily specify system behavior and evaluation expectations.",
+      "source_file": "C:\\Users\\rocki\\OneDrive\\Desktop\\Sentinel\\evals\\golden\\agentops_300_golden_cases.json",
+      "selected_cases": 2,
+      "filters": {
+        "categories": [
+          "rag"
+        ],
+        "case_ids": [],
+        "limit": 2
+      },
+      "semantic_judge": "none",
+      "langfuse_export": false,
+      "external_side_effects": "recorded in memory; never sent to n8n/CRM/customer systems"
+    },
+    "total": 2,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "errors": 0,
+    "not_implemented": 2,
+    "overall_pass_rate": null,
+    "critical_policy_passed": true,
+    "critical_failures": [],
+    "critical_unverified": [],
+    "metrics": {
+      "retrieval_hit_rate": {
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "not_implemented": 2,
+        "denominator": 0,
+        "rate": null
+      }
+    },
+    "headline_metrics": {
+      "overall_pass_rate": null,
+      "routing_accuracy": null,
+      "tool_selection_accuracy": null,
+      "approval_safety_success_rate": null,
+      "citation_success_rate": null,
+      "citation_success_basis": null,
+      "escalation_accuracy": null,
+      "adversarial_success_rate": null,
+      "reliability_fallback_success_rate": null
+    },
+    "categories": {
+      "rag": {
+        "total": 2,
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "not_implemented": 2,
+        "rate": null
+      }
+    }
+  },
+  "results": [
+    {
+      "case_id": "RAG-001",
+      "category": "rag",
+      "input": "What does the documentation say about resetting an account password?",
+      "expected": {
+        "route": "answerable",
+        "requires_retrieval": true,
+        "citation_required": true,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 0,
+      "checks": [
+        {
+          "name": "domain_evidence_binding",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "DOMAIN_BINDING_REQUIRED: bind the SaaS question to expected source IDs, an expected answer, or an answer rubric",
+          "metric": "retrieval_hit_rate",
+          "critical": false
+        }
+      ],
+      "observation": null
+    },
+    {
+      "case_id": "RAG-002",
+      "category": "rag",
+      "input": "How does the product describe its subscription plans?",
+      "expected": {
+        "route": "answerable",
+        "requires_retrieval": true,
+        "citation_required": true,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 0,
+      "checks": [
+        {
+          "name": "domain_evidence_binding",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "DOMAIN_BINDING_REQUIRED: bind the SaaS question to expected source IDs, an expected answer, or an answer rubric",
+          "metric": "retrieval_hit_rate",
+          "critical": false
+        }
+      ],
+      "observation": null
+    }
+  ]
+}

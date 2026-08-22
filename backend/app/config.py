@@ -30,6 +30,13 @@ def _env(key: str, default: str) -> str:
     return os.environ.get(key, default)
 
 
+# --- Tenant / knowledge-base identity ---
+# Keep Meridian as the product default while allowing an isolated public-docs
+# evaluation to reuse the same retrieval and answer pipeline without leaking
+# the fictional product name into the result.
+PRODUCT_NAME = _env("SUPPORT_PRODUCT_NAME", "Meridian")
+
+
 # --- Postgres ---
 DATABASE_URL = os.environ.get("DATABASE_URL") or (
     f"postgresql://{_env('POSTGRES_USER', 'sentinel')}:"
@@ -38,9 +45,17 @@ DATABASE_URL = os.environ.get("DATABASE_URL") or (
     f"{_env('POSTGRES_PORT', '5432')}/"
     f"{_env('POSTGRES_DB', 'sentinel')}"
 )
+DB_CONNECT_TIMEOUT = int(_env("DB_CONNECT_TIMEOUT", "5"))
 
-# --- Ollama ---
+# --- Model providers ---
+LLM_PROVIDER = _env("LLM_PROVIDER", "ollama").strip().lower()
+EMBED_PROVIDER = _env("EMBED_PROVIDER", "ollama").strip().lower()
 OLLAMA_HOST = _env("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
+GEMINI_API_KEY = _env("GEMINI_API_KEY", "")
+GEMINI_API_BASE = _env(
+    "GEMINI_API_BASE", "https://generativelanguage.googleapis.com/v1beta"
+).rstrip("/")
+GEMINI_TIMEOUT = int(_env("GEMINI_TIMEOUT", "90"))
 EMBED_MODEL = _env("EMBED_MODEL", "nomic-embed-text")
 CHAT_MODEL = _env("CHAT_MODEL", "llama3.2:3b")
 EMBED_DIM = int(_env("EMBED_DIM", "768"))

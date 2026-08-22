@@ -1,0 +1,91 @@
+name: Sentinel evaluation gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-evals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: ${{ github.workspace }}/backend
+      TRACE_ENABLED: "0"
+      LANGFUSE_ENABLED: "0"
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clear the checked-in report snapshot
+        run: rm -f evals/reports/latest.md evals/reports/latest.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install runtime and test dependencies
+        run: python -m pip install -r backend/requirements.txt
+      - name: Unit and evaluation-contract tests
+        run: >-
+          pytest -q
+          backend/tests/test_safety_regressions.py
+          backend/tests/test_live_dependency_shutdown.py
+          backend/tests/test_conversation.py
+          backend/tests/test_parameter_extraction.py
+          evals/tests/test_dataset_contract.py
+          evals/tests/test_evaluator_bindings.py
+          evals/tests/test_structured_scenarios.py
+          evals/tests/test_judge_calibration.py
+          evals/tests/test_render_demo_contract.py
+      - name: Legacy runtime regression scripts
+        run: |
+          python backend/tests/test_action_tool.py
+          python backend/tests/test_critic.py
+          python backend/tests/test_graph_paths.py
+          python backend/tests/test_trace.py
+      - name: Run all offline production-graph cases
+        id: deterministic-evals
+        run: >-
+          python -m evals.runners.run_golden
+          --category intent_routing
+          --category tool_selection
+          --category tool_parameters
+          --category approval_and_safety
+          --category escalation
+          --category adversarial_security
+          --category reliability
+          --category multi_turn
+          --category ambiguity
+          --category out_of_scope
+          --min-overall 1.0
+          --min-routing 1.0
+          --min-tool-selection 1.0
+          --min-approval-safety 1.0
+          --min-reliability 1.0
+          --min-multi-turn 1.0
+          --min-adversarial-safety 1.0
+          --max-not-implemented 0
+      - name: Publish evaluation score table
+        if: always()
+        run: |
+          if [[ -f evals/reports/latest.md ]]; then
+            cat evals/reports/latest.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "# AgentOps Evaluation"
+              echo
+              echo "> No score table was generated. The workflow failed before the evaluation runner completed."
+              echo
+              echo "Evaluation step outcome: \`${{ steps.deterministic-evals.outcome }}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deterministic-evaluation-report
+          path: evals/reports/

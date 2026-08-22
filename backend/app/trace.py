@@ -6,7 +6,7 @@ without threading usage through every function signature:
 
 - `track()` is a context manager wrapped around one graph run. It installs a
   fresh `Usage` accumulator in a ContextVar and times the run.
-- `record(data)` is called by the Ollama HTTP helper (`embed._post`) after every
+- `record(data)` is called by the model-provider gateway (`embed._post`) after every
   response. If a run is active AND the response carries token counts (i.e. it was
   a generative /api/chat call, not an embedding), it folds the counts in. Outside
   a run, or for responses without counts, it is a cheap no-op.
@@ -73,10 +73,10 @@ _current: contextvars.ContextVar[Optional[Usage]] = contextvars.ContextVar(
 
 
 def record(data: dict) -> None:
-    """Fold one Ollama response's token counts into the active run, if any.
+    """Fold one normalized model response's token counts into the active run, if any.
 
     No-ops when (a) no run is active, or (b) the response has no token counts
-    (e.g. /api/embeddings), so it is safe to call after *every* Ollama request.
+    (e.g. an embedding response), so it is safe after every provider request.
     """
     usage = _current.get()
     if usage is None:
@@ -105,7 +105,15 @@ def track() -> Iterator[Usage]:
         _current.reset(token)
 
 
-def log_run(request: str, state: dict, usage: Usage, *, conn=None) -> Optional[int]:
+def log_run(
+    request: str,
+    state: dict,
+    usage: Usage,
+    *,
+    channel: str | None = None,
+    sender: str | None = None,
+    conn=None,
+) -> Optional[int]:
     """Persist one row to `runs`. Returns the new id, or None if disabled/failed.
 
     Never raises: a tracing failure must not break the agent.
@@ -115,6 +123,8 @@ def log_run(request: str, state: dict, usage: Usage, *, conn=None) -> Optional[i
     action = state.get("action") or {}
     row = (
         request,
+        channel,
+        sender,
         state.get("route"),
         state.get("reason"),
         bool(state.get("escalated", False)),
@@ -136,10 +146,10 @@ def log_run(request: str, state: dict, usage: Usage, *, conn=None) -> Optional[i
             cur = conn.execute(
                 """
                 INSERT INTO runs (
-                    request, route, reason, escalated, model, llm_calls,
+                    request, channel, sender, route, reason, escalated, model, llm_calls,
                     prompt_tokens, completion_tokens, total_tokens, cost_usd,
                     latency_ms, citations, action_status, ticket_id
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
                 row,
@@ -153,21 +163,105 @@ def log_run(request: str, state: dict, usage: Usage, *, conn=None) -> Optional[i
         return None
 
 
-def recent(limit: int = 20, *, conn=None) -> list[dict[str, Any]]:
-    """Fetch the most recent runs (for `cli runs` / a future dashboard)."""
+def recent(limit: int = 30, *, conn=None) -> list[dict[str, Any]]:
+    """Fetch the most recent runs (the Inbox), newest first."""
     own = conn is None
     conn = conn or db.connect()
     try:
         cur = conn.execute(
             """
-            SELECT id, created_at, route, reason, escalated, model, llm_calls,
-                   total_tokens, cost_usd, latency_ms, ticket_id
+            SELECT id, created_at, channel, sender, request, route, reason,
+                   escalated, model, total_tokens, cost_usd, latency_ms,
+                   action_status
             FROM runs ORDER BY id DESC LIMIT %s
             """,
             (limit,),
         )
         cols = [c.name for c in cur.description]
         return [dict(zip(cols, r)) for r in cur.fetchall()]
+    finally:
+        if own:
+            conn.close()
+
+
+def get_run(run_id: int, *, conn=None) -> Optional[dict[str, Any]]:
+    """One run's full row (for the trace view). None if it doesn't exist."""
+    own = conn is None
+    conn = conn or db.connect()
+    try:
+        cur = conn.execute(
+            """
+            SELECT id, created_at, channel, sender, request, route, reason,
+                   escalated, model, llm_calls, prompt_tokens, completion_tokens,
+                   total_tokens, cost_usd, latency_ms, citations, action_status,
+                   ticket_id
+            FROM runs WHERE id = %s
+            """,
+            (run_id,),
+        )
+        r = cur.fetchone()
+        if r is None:
+            return None
+        cols = [c.name for c in cur.description]
+        return dict(zip(cols, r))
+    finally:
+        if own:
+            conn.close()
+
+
+def stats(*, conn=None) -> dict[str, Any]:
+    """Aggregate usage + cost stats for the dashboard, computed from `runs`
+    (today) and the live approval queue. Never raises on an empty DB."""
+    own = conn is None
+    conn = conn or db.connect()
+    try:
+        today = conn.execute(
+            """
+            SELECT
+                COUNT(*)                                    AS requests_today,
+                COALESCE(AVG(latency_ms), 0)                AS avg_latency_ms,
+                COALESCE(SUM(cost_usd), 0)                  AS cost_today,
+                COALESCE(AVG((escalated)::int)::float, 0)   AS escalation_rate
+            FROM runs
+            WHERE created_at::date = CURRENT_DATE
+            """
+        ).fetchone()
+
+        cost_mtd = conn.execute(
+            "SELECT COALESCE(SUM(cost_usd), 0) FROM runs "
+            "WHERE date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE)"
+        ).fetchone()[0]
+
+        pending = conn.execute(
+            "SELECT COUNT(*) FROM approval_queue WHERE status = 'pending'"
+        ).fetchone()[0]
+
+        model_rows = conn.execute(
+            """
+            SELECT COALESCE(model, 'unknown') AS label, COUNT(*) AS count
+            FROM runs WHERE created_at::date = CURRENT_DATE
+            GROUP BY 1 ORDER BY count DESC
+            """
+        ).fetchall()
+
+        channel_rows = conn.execute(
+            """
+            SELECT COALESCE(channel, 'web_form') AS label, COUNT(*) AS count
+            FROM runs WHERE created_at::date = CURRENT_DATE
+            GROUP BY 1 ORDER BY count DESC
+            """
+        ).fetchall()
+
+        return {
+            "requests_today": int(today[0]),
+            "pending_approvals": int(pending),
+            "avg_latency_ms": int(today[1]),
+            "escalation_rate": float(today[3]),
+            "cost_today": float(today[2]),
+            "cost_mtd": float(cost_mtd),
+            "model_split": [{"label": r[0], "count": int(r[1])} for r in model_rows],
+            "channel_split": [{"label": r[0], "count": int(r[1])} for r in channel_rows],
+        }
     finally:
         if own:
             conn.close()

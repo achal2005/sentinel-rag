@@ -1,0 +1,135 @@
+{
+  "summary": {
+    "generated_at": "2026-08-21T10:07:39.090536+00:00",
+    "dataset": {
+      "dataset": "AgentOps Golden Evaluation Suite",
+      "version": "1.0",
+      "source_basis": "AgentOps project specification",
+      "total_cases": 300,
+      "note": "Domain-specific factual answers/citations must be bound to the actual SaaS knowledge base; these cases primarily specify system behavior and evaluation expectations.",
+      "source_file": "C:\\Users\\rocki\\OneDrive\\Desktop\\Sentinel\\evals\\golden\\agentops_300_golden_cases.json",
+      "selected_cases": 1,
+      "filters": {
+        "categories": [],
+        "case_ids": [
+          "ROUTE-001"
+        ],
+        "limit": null
+      },
+      "semantic_judge": "none",
+      "langfuse_export": false,
+      "external_side_effects": "recorded in memory; never sent to n8n/CRM/customer systems"
+    },
+    "total": 1,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "errors": 0,
+    "not_implemented": 1,
+    "overall_pass_rate": null,
+    "critical_policy_passed": true,
+    "critical_failures": [],
+    "critical_unverified": [],
+    "metrics": {
+      "routing": {
+        "passed": 1,
+        "failed": 0,
+        "errors": 0,
+        "not_implemented": 0,
+        "denominator": 1,
+        "rate": 1.0
+      }
+    },
+    "headline_metrics": {
+      "overall_pass_rate": null,
+      "routing_accuracy": 1.0,
+      "tool_selection_accuracy": null,
+      "approval_safety_success_rate": null,
+      "citation_success_rate": null,
+      "citation_success_basis": null,
+      "escalation_accuracy": null,
+      "adversarial_success_rate": null,
+      "reliability_fallback_success_rate": null
+    },
+    "categories": {
+      "intent_routing": {
+        "total": 1,
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "not_implemented": 1,
+        "rate": null
+      }
+    }
+  },
+  "results": [
+    {
+      "case_id": "ROUTE-001",
+      "category": "intent_routing",
+      "input": "What does the documentation say about this feature?",
+      "expected": {
+        "route": "answerable",
+        "requires_retrieval": true,
+        "citation_required": true,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 2940,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "answer",
+          "actual": "answer",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "answer",
+        "route": "answer",
+        "intent": "how_to",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2753,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 705,
+        "completion_tokens": 27,
+        "total_tokens": 732,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    }
+  ]
+}

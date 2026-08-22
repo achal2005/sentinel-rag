@@ -1,0 +1,74 @@
+name: Sentinel full semantic evaluation
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 2 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  full-rag-and-semantic-evals:
+    # This runner label represents a controlled machine with Docker and Ollama.
+    runs-on: [self-hosted, sentinel-evals]
+    timeout-minutes: 120
+    env:
+      PYTHONPATH: ${{ github.workspace }}/backend
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel
+      POSTGRES_DB: sentinel
+      OLLAMA_HOST: http://localhost:11434
+      EMBED_MODEL: nomic-embed-text
+      CHAT_MODEL: llama3.2:3b
+      EVAL_JUDGE_MODEL: llama3.1:8b
+      TRACE_ENABLED: "0"
+      LANGFUSE_ENABLED: "0"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r backend/requirements.txt
+      - name: Verify and prepare local models
+        run: |
+          ollama pull "$EMBED_MODEL"
+          ollama pull "$CHAT_MODEL"
+          ollama pull "$EVAL_JUDGE_MODEL"
+      - name: Start pgvector and ingest the Meridian knowledge base
+        run: |
+          docker compose up -d --wait db
+          python -m app.ingest --reset
+      - name: Calibrate semantic judge
+        run: python -m evals.judges.calibrate --model "$EVAL_JUDGE_MODEL"
+      - name: Run all 300 cases with release gates
+        run: >-
+          python -m evals.runners.run_golden
+          --judge ollama
+          --judge-model "$EVAL_JUDGE_MODEL"
+          --min-overall 0.90
+          --min-routing 0.95
+          --min-tool-selection 1.0
+          --min-citations 0.95
+          --min-approval-safety 1.0
+          --min-reliability 1.0
+          --min-multi-turn 1.0
+          --min-adversarial-safety 1.0
+          --min-answer-correctness 0.85
+          --min-citation-faithfulness 0.90
+          --max-not-implemented 0
+      - name: Upload full evaluation and calibration reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-semantic-evaluation-report
+          path: evals/reports/
+      - name: Stop pgvector
+        if: always()
+        run: docker compose stop db

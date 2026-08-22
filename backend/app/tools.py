@@ -12,6 +12,7 @@ the router, the action node, and the approval queue import one source of truth.
 from __future__ import annotations
 
 import json
+import re
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
@@ -139,10 +140,16 @@ def requires_approval(tool: Tool) -> bool:
     return tool.risk_level == HIGH_RISK
 
 
-# Intent -> tool selection. Financial / destructive intents map to the high-risk
-# tool (which is gated behind human approval); everything else opens a ticket.
-# Conservative by design: unknown intents fall back to the low-risk create_ticket.
+# Intent -> tool selection.  This is an allowlist: an unknown model-produced
+# intent must never silently turn into a real side effect.  Explicit ticket
+# requests are also recognized from the original request text because small
+# routers sometimes label them generically as ``record_update``.
 _INTENT_TOOL: dict[str, str] = {
+    "create_ticket": "create_ticket",
+    "open_ticket": "create_ticket",
+    "ticket_creation": "create_ticket",
+    "support_issue": "create_ticket",
+    "incident_report": "create_ticket",
     "billing_dispute": "cancel_invoice",
     "cancellation": "cancel_invoice",
     "refund_request": "cancel_invoice",
@@ -150,10 +157,32 @@ _INTENT_TOOL: dict[str, str] = {
 }
 
 
-def select(decision: Any) -> Tool:
-    """Pick the tool for an action-routed request from its triage decision."""
+_EXPLICIT_TICKET_RE = re.compile(
+    r"\b(open|create|file|submit|raise|log)\b[^.?!]{0,60}"
+    r"\b(ticket|support\s+(?:ticket|case))\b",
+    re.IGNORECASE,
+)
+
+
+class ToolSelectionError(LookupError):
+    """No registered tool is authorized for the proposed intent/request."""
+
+
+def select(decision: Any, *, request: str | None = None) -> Tool:
+    """Pick an allowlisted tool or fail closed.
+
+    Tool selection is a security boundary.  A free-form or hallucinated intent
+    is not permission to execute the registry's safest-looking tool.
+    """
     intent = (getattr(decision, "intent", "") or "").strip().lower()
-    return get_tool(_INTENT_TOOL.get(intent, "create_ticket"))
+    name = _INTENT_TOOL.get(intent)
+    if name is None and request and _EXPLICIT_TICKET_RE.search(request):
+        name = "create_ticket"
+    if name is None:
+        raise ToolSelectionError(
+            f"no authorized tool mapping for intent {intent or 'unspecified'!r}"
+        )
+    return get_tool(name)
 
 
 # --- param schemas (Pydantic) ----------------------------------------------

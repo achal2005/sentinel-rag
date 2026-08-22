@@ -23,6 +23,7 @@ Thumbs.db
 
 # Browser-automation / temp artifacts
 .playwright-mcp/
+.runtime/
 n8n/_cookie.txt
 *.bak
 

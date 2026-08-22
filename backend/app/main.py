@@ -18,6 +18,16 @@ from pydantic import BaseModel, Field
 
 from . import tools
 from .answer import answer
+from .config import (
+    CHAT_MODEL,
+    CONFIDENCE_MIN,
+    EMBED_MODEL,
+    EMBED_PROVIDER,
+    LANGFUSE_ENABLED,
+    LLM_PROVIDER,
+    RETRIEVAL_TOPK,
+    TRACE_ENABLED,
+)
 from .graph import run as run_graph
 
 app = FastAPI(
@@ -94,6 +104,7 @@ class TriageResponse(BaseModel):
     completion_tokens: int = 0
     total_tokens: int = 0
     cost_usd: float = 0.0
+    confidence_min: float = CONFIDENCE_MIN
 
 
 def _sources(hits) -> list[Source]:
@@ -112,6 +123,35 @@ def _sources(hits) -> list[Source]:
 def health() -> dict[str, str]:
     """Simple health check endpoint."""
     return {"status": "ok"}
+
+
+@app.get("/system")
+def system_info() -> dict[str, Any]:
+    """Public, non-secret runtime facts used by the operator console.
+
+    This keeps model, retrieval, and tool claims in the UI tied to the code that
+    is actually running instead of duplicating them as marketing constants.
+    """
+    return {
+        "service": app.title,
+        "version": app.version,
+        "provider": LLM_PROVIDER,
+        "embed_provider": EMBED_PROVIDER,
+        "chat_model": CHAT_MODEL,
+        "embed_model": EMBED_MODEL,
+        "retrieval_topk": RETRIEVAL_TOPK,
+        "confidence_min": CONFIDENCE_MIN,
+        "tools": [
+            {
+                "name": tool.name,
+                "risk_level": tool.risk_level,
+                "required_params": tool.required_params(),
+            }
+            for tool in tools.list_tools()
+        ],
+        "tracing_enabled": TRACE_ENABLED,
+        "langfuse_enabled": LANGFUSE_ENABLED,
+    }
 
 
 @app.post("/ask", response_model=AskResponse)
@@ -201,11 +241,100 @@ def run_audit(run_id: int) -> list[dict[str, Any]]:
     return audit.for_run(run_id)
 
 
+# --- runs / inbox / stats (Week 3 glass) -----------------------------------
+
+class RunRow(BaseModel):
+    id: int
+    created_at: datetime
+    channel: str = "web_form"
+    sender: str | None = None
+    request: str
+    route: str = "escalate"
+    reason: str | None = None
+    escalated: bool = False
+    model: str | None = None
+    total_tokens: int = 0
+    cost_usd: float = 0.0
+    latency_ms: int = 0
+    action_status: str | None = None
+
+
+class RunAuditStep(BaseModel):
+    step: str
+    detail: dict[str, Any] = Field(default_factory=dict)
+
+
+class RunDetail(RunRow):
+    citations: list[str] = Field(default_factory=list)
+    sources: list[Source] = Field(default_factory=list)
+    steps: list[RunAuditStep] = Field(default_factory=list)
+
+
+class StatBreakdown(BaseModel):
+    label: str
+    count: int
+
+
+class UsageStats(BaseModel):
+    requests_today: int
+    pending_approvals: int
+    avg_latency_ms: int
+    escalation_rate: float
+    cost_today: float
+    cost_mtd: float
+    model_split: list[StatBreakdown]
+    channel_split: list[StatBreakdown]
+
+
+def _run_row(r: dict[str, Any]) -> RunRow:
+    return RunRow(
+        id=r["id"],
+        created_at=r["created_at"],
+        channel=r.get("channel") or "web_form",
+        sender=r.get("sender"),
+        request=r["request"],
+        route=r.get("route") or "escalate",
+        reason=r.get("reason"),
+        escalated=bool(r.get("escalated", False)),
+        model=r.get("model"),
+        total_tokens=int(r.get("total_tokens") or 0),
+        cost_usd=float(r.get("cost_usd") or 0),
+        latency_ms=int(r.get("latency_ms") or 0),
+        action_status=r.get("action_status"),
+    )
+
+
+@app.get("/runs", response_model=list[RunRow])
+def list_runs(limit: int = 30) -> list[RunRow]:
+    """Recent triage runs — the Inbox, newest first."""
+    from . import trace
+    return [_run_row(r) for r in trace.recent(limit=limit)]
+
+
+@app.get("/runs/{run_id}", response_model=RunDetail)
+def get_run(run_id: int) -> RunDetail:
+    """One run's full trace: the run row + citations + per-step audit trail."""
+    from . import audit, trace
+    row = trace.get_run(run_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    steps = [RunAuditStep(step=s["step"], detail=s.get("detail") or {}) for s in audit.for_run(run_id)]
+    base = _run_row(row).model_dump()
+    return RunDetail(**base, citations=list(row.get("citations") or []), sources=[], steps=steps)
+
+
+@app.get("/stats", response_model=UsageStats)
+def usage_stats() -> UsageStats:
+    """Aggregate usage + cost stats for the dashboard (today + this month)."""
+    from . import trace
+    return UsageStats(**trace.stats())
+
+
 @app.post("/triage", response_model=TriageResponse)
 def handle_triage(req: TriageRequest) -> TriageResponse:
     """Route the request through the graph and return decision + outcome + evidence."""
     started = time.perf_counter()
-    state = run_graph(req.query)
+    state = run_graph(req.query, channel=req.channel)
     latency_ms = int((time.perf_counter() - started) * 1000)
 
     decision = state.get("decision")
@@ -237,4 +366,5 @@ def handle_triage(req: TriageRequest) -> TriageResponse:
         completion_tokens=usage.get("completion_tokens", 0),
         total_tokens=usage.get("total_tokens", 0),
         cost_usd=usage.get("cost_usd", 0.0),
+        confidence_min=CONFIDENCE_MIN,
     )

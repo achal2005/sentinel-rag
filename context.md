@@ -3,8 +3,12 @@
 > Session-orientation file. Anyone (or any AI session) picking up this project should
 > read this to understand what Sentinel is, what's built, how to run it, and what's next —
 > without re-deriving it from the code every time.
+>
+> **`README.md` is the authoritative, up-to-date description of the shipped system**
+> (architecture, API surface, eval results, quickstart). This file is the narrative
+> build log; where the two ever disagree, trust the README.
 
-_Last updated: 2026-08-21_
+_Last updated: 2026-08-22_
 
 ---
 
@@ -20,7 +24,7 @@ risky actions, cost tracking, and a full eval + tracing layer.
   working names; **Sentinel** is the project name).
 - It's a ₹0-cost portfolio project for AI/ML internship applications.
 
-## 2. Current status (2026-08-21)
+## 2. Current status (2026-08-22)
 
 - ✅ **Week 1 (RAG core) — COMPLETE.** Ingest → hybrid retrieval → cited answers, exposed
   over HTTP via a FastAPI `/ask` endpoint.
@@ -30,24 +34,28 @@ risky actions, cost tracking, and a full eval + tracing layer.
   logging to a `runs` table, and the full `/triage` endpoint.
 - ✅ **Week 3 (Safety + Observability) — COMPLETE.** Risk-tiered tool execution (low-risk
   auto-fires, high-risk queues for human approval), `approval_queue` table, full
-  approve/reject REST API, and a production-quality **Next.js approval UI** with
-  live-polling, Approve & Run / Reject buttons that fire the n8n webhook on approval.
-  End-to-end tested: UI → Next.js proxy → FastAPI → n8n webhook → Postgres row confirmed.
-  Plus the **observability** half: a per-step **audit log** (`audit_log` table: router
-  decision → retrieved chunk IDs → tool+params → outcome, + human approve/reject events)
-  and **self-hosted Langfuse** tracing — one rich trace per request
-  (router → chunks → prompt → tool → cost), verified rendering in the Langfuse UI.
+  approve/reject REST API, deterministic **critic** gate (defense-in-depth re-check in
+  `tools.approve()`), idempotency ledger, a per-step **audit log**, and **self-hosted
+  Langfuse** tracing — one rich trace per request.
+- ✅ **Week 4 (Evals + provider + polish) — COMPLETE.**
+  - **300-case golden suite** (`evals/`) with a deterministic runner and a separate,
+    calibration-gated local **LLM-as-judge**; the deterministic PR gate is **245/245**.
+  - **GitHub Actions eval gates** (`.github/workflows/evals.yml` PR gate +
+    `evals-full.yml` weekly semantic run).
+  - **Gemini provider** alongside Ollama (independent chat/embed providers, `embed.py`).
+  - **Multi-turn** support (`conversation.py`) + reliability/fault-injection and opt-in
+    physical-shutdown tests.
+  - **Frontend rebuilt** into the "Nightwatch" operator console (landing + Inbox / Trace /
+    Approvals / Usage / Console under the `app/(app)/` route group), wired to live API
+    with honest offline states — no mock data.
+  - **Render public-docs case study** (`case-studies/`) and a full README rewrite with
+    architecture diagram, evidence tables, and demo GIF.
 - ✅ **Router baseline (Week 2)** — prompted `llama3.2:3b` router, **88.6%** routing
   accuracy on the golden set.
 - ✅ **LoRA fine-tuning experiment (Week 4 add-on)** — trained a 1B LoRA router on Kaggle
   T4; honest result: **85.7%**, i.e. −2.9 pts vs. the prompt (didn't beat it —
   expected & fine).
-- ✅ **Next.js triage console** — a polished frontend at `/` that submits requests to
-  `/triage`, shows the pipeline rail (Router → Answer/Action/Escalate → Result),
-  renders triage records with route badges, citations, action details, and links to
-  the approval queue.
-- ⬜ **Week 4** — eval-in-CI (GitHub Actions), README polish with architecture diagram
-  + GIF, demo video. (Langfuse tracing moved into Week 3, done.)
+- ⬜ **Remaining** — only a public demo deployment link. No public endpoint is implied yet.
 
 ## 3. Architecture (6 layers)
 
@@ -94,27 +102,29 @@ Sentinel/
 │   │                       #   POST /approvals/:id/approve|reject, GET /runs/:id/audit, GET /health
 │   ├── requirements.txt    # psycopg[binary], fastapi, uvicorn[standard], langgraph, pydantic
 │   └── .venv/              # Python 3.14 venv
-├── frontend/               # Next.js 16 (React 19, Tailwind 4, shadcn components)
+├── frontend/               # Next.js 16 (React 19, Tailwind 4) "Nightwatch" console
 │   ├── app/
-│   │   ├── page.tsx        # triage console (submit requests, see pipeline + results)
-│   │   ├── approvals/
-│   │   │   └── page.tsx    # human approval queue UI (approve & run / reject)
-│   │   └── api/
-│   │       ├── triage/route.ts         # proxy → backend /triage
-│   │       ├── health/route.ts         # proxy → backend /health
-│   │       └── approvals/
-│   │           ├── route.ts            # proxy → backend /approvals
-│   │           └── [id]/[action]/route.ts  # proxy → backend /approvals/:id/:action
+│   │   ├── page.tsx        # public landing (live evals/system/stats via /api)
+│   │   ├── (app)/          # operator console route group (shared app-shell layout)
+│   │   │   ├── inbox/         # persisted runs list
+│   │   │   ├── requests/[id]/ # one run's citations + usage + audit trail
+│   │   │   ├── approvals/     # human approval queue (approve & run / reject)
+│   │   │   ├── usage/         # cost / latency / eval observability
+│   │   │   └── console/       # submit a request to the production graph
+│   │   └── api/            # same-origin proxies → FastAPI (triage, health, system,
+│   │       │               #   stats, runs, runs/:id, evals, approvals/:id/:action)
 │   ├── components/
+│   │   ├── shell/          # app-shell (sidebar nav + live approvals badge)
 │   │   ├── console/        # pipeline-rail, request-console, triage-record, evidence-list,
-│   │   │                   #   route-badge, risk-badge, system-status
-│   │   └── ui/             # shadcn primitives (button, etc.)
+│   │   │                   #   route/risk/status badges, stat-card, system-status
+│   │   └── ui/             # button, border-beam, handwriting-svg
 │   ├── lib/
-│   │   ├── api.ts          # triage(), fetchApprovals(), decideApproval(), checkHealth()
-│   │   ├── types.ts        # TriageResult, ApprovalItem, ApprovalActionResult, etc.
-│   │   ├── routes.ts       # route constants
+│   │   ├── api.ts          # triage/fetchRuns/fetchRun/fetchStats/fetchEvals/fetchSystem/
+│   │   │                   #   fetchApprovals/decideApproval/checkHealth
+│   │   ├── types.ts        # TriageResult, RunRow/RunDetail, UsageStats, EvalSummary, ...
+│   │   ├── format.ts       # display formatters
 │   │   └── utils.ts        # cn() helper
-│   └── package.json        # next 16, react 19, tailwindcss 4, shadcn, lucide-react
+│   └── package.json        # next 16, react 19, tailwindcss 4, lucide-react
 ├── n8n/
 │   ├── workflows/
 │   │   ├── webhook-to-tickets.json         # Webhook → tickets table (low-risk tool)
@@ -286,7 +296,11 @@ Operator opens /approvals page
 ## 11. Numbers to remember
 
 - Ingest: **175 chunks** from 16 markdown files.
-- Golden set: **35 cases** (answerable 15, action 5, unsupported 6, adversarial 8, spam 1).
+- Legacy router golden set (`evals/golden.json`): **35 cases** — the held-out set the
+  Week 2 router baseline and the LoRA experiment were scored against.
+- Main eval suite (`evals/golden/agentops_meridian_300_cases.json`): **300 cases**; the
+  **245** deterministically checkable ones are the PR gate — currently **245/245**
+  (reproducible with the LLM offline; see `evals/reports/latest.md`).
 - Router baseline (Week 2): **routing 88.6%, urgency 82.9%, escalation recall 81.8%, over-escalation 0%.**
 - Router after Week 3 safety-rule (ticket-creation stays `action` even with an asserted
   priority): **routing 91.4%** (32/35), no regressions. NB: the LoRA experiment below was
@@ -307,6 +321,7 @@ date-versioned API `Meridian-Version: 2025-08-01`. Every doc H2 ends with a stab
 
 ## 13. Next step
 
-Week 4: **eval-in-CI** (GitHub Actions), README polish with architecture diagram + GIF,
-2-min demo video, and the personalized founder pitch emails. (Langfuse tracing was pulled
-forward into Week 3 and is done.)
+Weeks 1–4 are complete (evals-in-CI, semantic judge, Gemini provider, frontend rebuild,
+case study, README polish all done). The only remaining item is a **public demo
+deployment link**; a 2-min demo video and the personalized founder pitch emails are the
+non-code follow-ups.

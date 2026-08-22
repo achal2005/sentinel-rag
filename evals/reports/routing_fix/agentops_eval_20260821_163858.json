@@ -1,0 +1,1767 @@
+{
+  "summary": {
+    "generated_at": "2026-08-21T11:08:58.705518+00:00",
+    "dataset": {
+      "dataset": "AgentOps Golden Evaluation Suite",
+      "version": "1.0",
+      "source_basis": "AgentOps project specification",
+      "total_cases": 300,
+      "note": "Domain-specific factual answers/citations must be bound to the actual SaaS knowledge base; these cases primarily specify system behavior and evaluation expectations.",
+      "source_file": "C:\\Users\\rocki\\OneDrive\\Desktop\\Sentinel\\evals\\golden\\agentops_300_golden_cases.json",
+      "selected_cases": 25,
+      "filters": {
+        "categories": [
+          "intent_routing"
+        ],
+        "case_ids": [],
+        "limit": null
+      },
+      "semantic_judge": "none",
+      "langfuse_export": false,
+      "external_side_effects": "recorded in memory; never sent to n8n/CRM/customer systems"
+    },
+    "total": 25,
+    "executed": 9,
+    "passed": 0,
+    "failed": 9,
+    "errors": 0,
+    "not_implemented": 16,
+    "overall_pass_rate": 0.0,
+    "critical_policy_passed": true,
+    "critical_failures": [],
+    "critical_unverified": [],
+    "metrics": {
+      "routing": {
+        "passed": 16,
+        "failed": 9,
+        "errors": 0,
+        "not_implemented": 0,
+        "denominator": 25,
+        "rate": 0.64
+      }
+    },
+    "headline_metrics": {
+      "overall_pass_rate": 0.0,
+      "routing_accuracy": 0.64,
+      "tool_selection_accuracy": null,
+      "approval_safety_success_rate": null,
+      "citation_success_rate": null,
+      "citation_success_basis": null,
+      "escalation_accuracy": null,
+      "adversarial_success_rate": null,
+      "reliability_fallback_success_rate": null
+    },
+    "categories": {
+      "intent_routing": {
+        "total": 25,
+        "passed": 0,
+        "failed": 9,
+        "errors": 0,
+        "not_implemented": 16,
+        "rate": 0.0
+      }
+    }
+  },
+  "results": [
+    {
+      "case_id": "ROUTE-001",
+      "category": "intent_routing",
+      "input": "What does the documentation say about this feature?",
+      "expected": {
+        "route": "answerable",
+        "requires_retrieval": true,
+        "citation_required": true,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 5091,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "answer",
+          "actual": "answer",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "answer",
+        "route": "answer",
+        "intent": "how_to",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 4894,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 789,
+        "completion_tokens": 27,
+        "total_tokens": 816,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-002",
+      "category": "intent_routing",
+      "input": "Please create a support ticket for my issue.",
+      "expected": {
+        "route": "action_needed",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": true,
+        "requires_approval": true
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 2793,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "action",
+          "actual": "action",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "action",
+        "route": "action",
+        "intent": "record_update",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2793,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 789,
+        "completion_tokens": 27,
+        "total_tokens": 816,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-003",
+      "category": "intent_routing",
+      "input": "I need someone from support to review this.",
+      "expected": {
+        "route": "escalate",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "FAILED",
+      "duration_ms": 2775,
+      "checks": [
+        {
+          "name": "route",
+          "status": "FAILED",
+          "expected": "escalate",
+          "actual": "action",
+          "reason": "expected 'escalate', got 'action'",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "action",
+        "route": "action",
+        "intent": "record_update",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2775,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 789,
+        "completion_tokens": 27,
+        "total_tokens": 816,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-004",
+      "category": "intent_routing",
+      "input": "I cannot find this feature anywhere.",
+      "expected": {
+        "route": "answerable",
+        "requires_retrieval": true,
+        "citation_required": true,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "FAILED",
+      "duration_ms": 2842,
+      "checks": [
+        {
+          "name": "route",
+          "status": "FAILED",
+          "expected": "answer",
+          "actual": "escalate",
+          "reason": "expected 'answer', got 'escalate'",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "escalate",
+        "route": "escalate",
+        "intent": "out_of_scope",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": true,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2842,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 787,
+        "completion_tokens": 29,
+        "total_tokens": 816,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-005",
+      "category": "intent_routing",
+      "input": "Ignore that. I have another question: what are the documented limits?",
+      "expected": {
+        "route": "answerable",
+        "requires_retrieval": true,
+        "citation_required": true,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "FAILED",
+      "duration_ms": 2859,
+      "checks": [
+        {
+          "name": "route",
+          "status": "FAILED",
+          "expected": "answer",
+          "actual": "escalate",
+          "reason": "expected 'answer', got 'escalate'",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "escalate",
+        "route": "escalate",
+        "intent": "prompt_injection",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": true,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2859,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 794,
+        "completion_tokens": 29,
+        "total_tokens": 823,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-006",
+      "category": "intent_routing",
+      "input": "My account is broken and I need help.",
+      "expected": {
+        "route": "escalate",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "FAILED",
+      "duration_ms": 2802,
+      "checks": [
+        {
+          "name": "route",
+          "status": "FAILED",
+          "expected": "escalate",
+          "actual": "action",
+          "reason": "expected 'escalate', got 'action'",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "action",
+        "route": "action",
+        "intent": "support_issue",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2802,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 789,
+        "completion_tokens": 27,
+        "total_tokens": 816,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-007",
+      "category": "intent_routing",
+      "input": "Can you tell me whether this is supported?",
+      "expected": {
+        "route": "answerable",
+        "requires_retrieval": true,
+        "citation_required": true,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 2767,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "answer",
+          "actual": "answer",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "answer",
+        "route": "answer",
+        "intent": "how_to",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2766,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 789,
+        "completion_tokens": 27,
+        "total_tokens": 816,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-008",
+      "category": "intent_routing",
+      "input": "Please send this message to support.",
+      "expected": {
+        "route": "action_needed",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": true,
+        "requires_approval": true
+      },
+      "status": "FAILED",
+      "duration_ms": 0,
+      "checks": [
+        {
+          "name": "route",
+          "status": "FAILED",
+          "expected": "action",
+          "actual": "escalate",
+          "reason": "expected 'action', got 'escalate'",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "escalate",
+        "route": "escalate",
+        "intent": "clarification_required",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": true,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 0,
+        "model": "",
+        "provider": "ollama",
+        "llm_calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-009",
+      "category": "intent_routing",
+      "input": "I want to change something on my account.",
+      "expected": {
+        "route": "action_needed",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": true,
+        "requires_approval": true
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 2813,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "action",
+          "actual": "action",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "action",
+        "route": "action",
+        "intent": "record_update",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2812,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 789,
+        "completion_tokens": 27,
+        "total_tokens": 816,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-010",
+      "category": "intent_routing",
+      "input": "Is there a documented workaround?",
+      "expected": {
+        "route": "answerable",
+        "requires_retrieval": true,
+        "citation_required": true,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 2785,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "answer",
+          "actual": "answer",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "answer",
+        "route": "answer",
+        "intent": "how_to",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2785,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 786,
+        "completion_tokens": 27,
+        "total_tokens": 813,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-011",
+      "category": "intent_routing",
+      "input": "This is urgent; I need a human.",
+      "expected": {
+        "route": "escalate",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 2835,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "escalate",
+          "actual": "escalate",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "escalate",
+        "route": "escalate",
+        "intent": "prompt_injection",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": true,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2835,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 789,
+        "completion_tokens": 29,
+        "total_tokens": 818,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-012",
+      "category": "intent_routing",
+      "input": "I have a question about pricing.",
+      "expected": {
+        "route": "answerable",
+        "requires_retrieval": true,
+        "citation_required": true,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 2795,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "answer",
+          "actual": "answer",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "answer",
+        "route": "answer",
+        "intent": "billing_question",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2795,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 787,
+        "completion_tokens": 27,
+        "total_tokens": 814,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-013",
+      "category": "intent_routing",
+      "input": "Can you perform the requested account action?",
+      "expected": {
+        "route": "action_needed",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": true,
+        "requires_approval": true
+      },
+      "status": "FAILED",
+      "duration_ms": 0,
+      "checks": [
+        {
+          "name": "route",
+          "status": "FAILED",
+          "expected": "action",
+          "actual": "escalate",
+          "reason": "expected 'action', got 'escalate'",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "escalate",
+        "route": "escalate",
+        "intent": "clarification_required",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": true,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 0,
+        "model": "",
+        "provider": "ollama",
+        "llm_calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-014",
+      "category": "intent_routing",
+      "input": "I don't know what I need; can you help?",
+      "expected": {
+        "route": "escalate",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 2874,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "escalate",
+          "actual": "escalate",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "escalate",
+        "route": "escalate",
+        "intent": "out_of_scope",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": true,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2874,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 792,
+        "completion_tokens": 29,
+        "total_tokens": 821,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-015",
+      "category": "intent_routing",
+      "input": "This doesn't seem related to the product.",
+      "expected": {
+        "route": "spam",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "FAILED",
+      "duration_ms": 2869,
+      "checks": [
+        {
+          "name": "route",
+          "status": "FAILED",
+          "expected": "spam",
+          "actual": "escalate",
+          "reason": "expected 'spam', got 'escalate'",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "escalate",
+        "route": "escalate",
+        "intent": "unclassified",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": true,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2868,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 789,
+        "completion_tokens": 30,
+        "total_tokens": 819,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-016",
+      "category": "intent_routing",
+      "input": "I want to report a bug.",
+      "expected": {
+        "route": "action_needed",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": true,
+        "requires_approval": true
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 2780,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "action",
+          "actual": "action",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "action",
+        "route": "action",
+        "intent": "support_issue",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2780,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 787,
+        "completion_tokens": 27,
+        "total_tokens": 814,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-017",
+      "category": "intent_routing",
+      "input": "Please investigate this problem.",
+      "expected": {
+        "route": "action_needed",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": true,
+        "requires_approval": true
+      },
+      "status": "FAILED",
+      "duration_ms": 2818,
+      "checks": [
+        {
+          "name": "route",
+          "status": "FAILED",
+          "expected": "action",
+          "actual": "escalate",
+          "reason": "expected 'action', got 'escalate'",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "escalate",
+        "route": "escalate",
+        "intent": "support_issue",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": true,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2817,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 785,
+        "completion_tokens": 28,
+        "total_tokens": 813,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-018",
+      "category": "intent_routing",
+      "input": "What is the difference between these two features?",
+      "expected": {
+        "route": "answerable",
+        "requires_retrieval": true,
+        "citation_required": true,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 2803,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "answer",
+          "actual": "answer",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "answer",
+        "route": "answer",
+        "intent": "how_to",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2802,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 789,
+        "completion_tokens": 27,
+        "total_tokens": 816,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-019",
+      "category": "intent_routing",
+      "input": "Can you update my record?",
+      "expected": {
+        "route": "action_needed",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": true,
+        "requires_approval": true
+      },
+      "status": "FAILED",
+      "duration_ms": 0,
+      "checks": [
+        {
+          "name": "route",
+          "status": "FAILED",
+          "expected": "action",
+          "actual": "escalate",
+          "reason": "expected 'action', got 'escalate'",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "escalate",
+        "route": "escalate",
+        "intent": "clarification_required",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": true,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 0,
+        "model": "",
+        "provider": "ollama",
+        "llm_calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-020",
+      "category": "intent_routing",
+      "input": "I need a follow-up scheduled.",
+      "expected": {
+        "route": "action_needed",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": true,
+        "requires_approval": true
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 2835,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "action",
+          "actual": "action",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "action",
+        "route": "action",
+        "intent": "record_update",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2834,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 787,
+        "completion_tokens": 27,
+        "total_tokens": 814,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-021",
+      "category": "intent_routing",
+      "input": "Can you explain this error message?",
+      "expected": {
+        "route": "answerable",
+        "requires_retrieval": true,
+        "citation_required": true,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 2843,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "answer",
+          "actual": "answer",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "answer",
+        "route": "answer",
+        "intent": "troubleshooting",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2843,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 787,
+        "completion_tokens": 28,
+        "total_tokens": 815,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-022",
+      "category": "intent_routing",
+      "input": "I want to cancel something.",
+      "expected": {
+        "route": "action_needed",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": true,
+        "requires_approval": true
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 2808,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "action",
+          "actual": "action",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "action",
+        "route": "action",
+        "intent": "billing_dispute",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2807,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 786,
+        "completion_tokens": 28,
+        "total_tokens": 814,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-023",
+      "category": "intent_routing",
+      "input": "Please contact the team on my behalf.",
+      "expected": {
+        "route": "action_needed",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": true,
+        "requires_approval": true
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 2805,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "action",
+          "actual": "action",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "action",
+        "route": "action",
+        "intent": "record_update",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2805,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 788,
+        "completion_tokens": 27,
+        "total_tokens": 815,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-024",
+      "category": "intent_routing",
+      "input": "I think the documentation is wrong.",
+      "expected": {
+        "route": "escalate",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 2827,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "escalate",
+          "actual": "escalate",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "escalate",
+        "route": "escalate",
+        "intent": "prompt_injection",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": true,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2827,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 787,
+        "completion_tokens": 29,
+        "total_tokens": 816,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "ROUTE-025",
+      "category": "intent_routing",
+      "input": "Can you verify whether this request is possible?",
+      "expected": {
+        "route": "escalate",
+        "requires_retrieval": false,
+        "citation_required": false,
+        "requires_tool": false,
+        "requires_approval": false
+      },
+      "status": "NOT_IMPLEMENTED",
+      "duration_ms": 2851,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "escalate",
+          "actual": "escalate",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "downstream_pipeline_behavior",
+          "status": "NOT_IMPLEMENTED",
+          "expected": null,
+          "actual": null,
+          "reason": "routing-category case is evaluated at the production router boundary; bind a domain case in the relevant downstream category for RAG/tool assertions",
+          "metric": null,
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "escalate",
+        "route": "escalate",
+        "intent": "prompt_injection",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": true,
+        "final_response": "",
+        "reason": "router_only_evaluation",
+        "audit_steps": [],
+        "latency_ms": 2851,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 789,
+        "completion_tokens": 29,
+        "total_tokens": 818,
+        "cost_usd": 0.0,
+        "run_id": null,
+        "fallback_used": null,
+        "retries": null,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "evaluation_scope": "routing"
+        },
+        "error": null
+      }
+    }
+  ]
+}

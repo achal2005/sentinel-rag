@@ -1,16 +1,10 @@
 import { routeColor } from "@/lib/routes";
 import type { RouteKey } from "@/lib/types";
 
-const BRANCHES: RouteKey[] = ["answer", "action", "escalate"];
-const BRANCH_LABEL: Record<RouteKey, string> = {
-  answer: "answer",
-  action: "action",
-  escalate: "escalate",
-  spam: "escalate",
-};
+const BRANCHES: RouteKey[] = ["answer", "action", "escalate", "spam"];
 
 /**
- * The triage pipeline, made visible: ingest -> router -> one of three branches.
+ * The triage pipeline, made visible: ingest -> router -> one of four outcomes.
  * `active` lights the chosen branch in its route color; `processing` pulses the
  * router while a decision is in flight.
  */
@@ -21,8 +15,7 @@ export function PipelineRail({
   active: RouteKey | null;
   processing: boolean;
 }) {
-  // spam is dispatched down the escalate branch in the graph.
-  const litBranch = active ? BRANCH_LABEL[active] : null;
+  const litBranch = active;
 
   return (
     <div className="flex flex-col items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-faint sm:flex-row sm:justify-center">

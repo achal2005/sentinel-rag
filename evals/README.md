@@ -1,104 +1,149 @@
-# Evaluation harness — golden set
+# AgentOps evaluation framework
 
-This folder holds the golden evaluation set for the AgentOps support agent. Every case is written **against the fictional Meridian knowledge base** in [`../docs`](../docs), including its stable `[citation-id]` tags, so retrieval and citation correctness can be checked deterministically.
+This directory contains evaluation and regression tests, **not model-training
+data**. The 300-case suite is never imported by the fine-tuning code.
 
-> Principle (from the build plan §20–22): **report each metric, not one vague number.** These cases are designed so a failing capability is obvious and reproducible.
+## How it connects to AgentOps
 
----
+The runner invokes the production `backend/app/graph.py` graph. That keeps the
+real router, retrieval, answer generation, critic, tool selection, parameter
+validation, approval decision, trace accounting, and audit collection on the
+execution path. The adapter replaces only unsafe external boundaries during an
+evaluation:
 
-## Files
+- n8n/webhook calls are recorded in memory;
+- approval-queue writes are validated, then recorded in memory;
+- run/audit persistence is captured for assertions without polluting production
+  tables;
+- Langfuse export is off by default and can be enabled with `--langfuse`.
 
-| File | Purpose |
-|---|---|
-| `golden.json` | The labeled cases (see schema below). |
-| `README.md` | This file. |
-| `tests/` | (to be added) pytest suites that run each case through the pipeline. |
+No case-specific fake agent or expected-answer lookup exists.
 
-Suggested test split, matching the plan:
+## Layout
 
-```
+```text
 evals/
-  golden.json
-  tests/
-    test_routing.py      # route + intent + urgency + action_required
-    test_retrieval.py    # retrieval hit-rate for expected_citations
-    test_citations.py    # cited IDs are present AND supported by retrieved text
-    test_tools.py        # tool selection + Pydantic param validity
-    test_escalation.py   # must_escalate / must_refuse / approval gate
+├── golden/
+│   ├── agentops_300_golden_cases.json  # unchanged attached skeleton
+│   ├── agentops_meridian_300_cases.json # executable default suite
+│   └── build_meridian_suite.py          # reproducible suite generator
+├── judges/
+│   ├── deterministic.py                # exact/state/safety assertions
+│   └── llm_judge.py                    # optional structured semantic judge
+├── runners/
+│   ├── agentops_adapter.py             # production graph + safe boundaries
+│   ├── evaluator.py
+│   └── run_golden.py
+├── reports/                             # generated JSON + Markdown
+├── tests/test_golden.py                 # pytest parametrization
+├── reporting.py
+└── schema.py                            # forward-compatible case contracts
 ```
 
----
+## Run
 
-## Case schema
+From the repository root, with Postgres and Ollama running and the knowledge
+base already ingested:
 
-Each entry in `golden.json.cases` has:
+```bash
+python -m evals.runners.run_golden
+python -m evals.runners.run_golden --category intent_routing --limit 5
+pytest evals/
+```
 
-| Field | Meaning |
-|---|---|
-| `id` | Stable case ID (`ans-*`, `act-*`, `uns-*`, `adv-*`, `spam-*`, `oos-*`). |
-| `category` | `answerable` \| `action` \| `unsupported` \| `adversarial` \| `spam`. |
-| `channel` | Simulated ingestion channel (`web_form` for the MVP). |
-| `input` | The raw request text the agent receives. |
-| `expected.route` | Expected supervisor decision: `answer` \| `action` \| `escalate` \| `spam`. |
-| `expected.intent` | Coarse intent label. |
-| `expected.urgency` | `low` \| `medium` \| `high`. |
-| `expected.action_required` | Whether an external side effect is expected. |
-| `expected.tool` | Expected tool when `route=action`, else `null`. |
-| `expected.risk_level` | Risk of the action (drives the human-approval gate). |
-| `expected.must_escalate` | Correct behavior is to escalate rather than answer. |
-| `expected.must_refuse` | Agent must refuse outright. |
-| `expected.requires_human_approval` | High-risk action must wait for approval before n8n executes. |
-| `expected.expected_citations` | Citation IDs a correct grounded answer should reference (**subset** match — extra supported citations are fine). |
-| `expected.idempotent_side_effect` | Exactly one real side effect is allowed despite duplicate/retry. |
-| `expected.notes` | Why the case exists / what it probes. |
+The CLI writes `evals/reports/in_progress.json` atomically after every completed
+case. After an interruption, rerun the identical command with `--resume`:
 
----
+```bash
+python -m evals.runners.run_golden --judge ollama --resume
+```
 
-## Category coverage
+The default is deterministic evaluation. Routing, approval, tool execution,
+clarification, refusal, non-exfiltration, and out-of-scope decline checks use
+observable production state and fixed response contracts. A generative judge
+cannot override those safety facts.
 
-| Category | Count | What it proves |
-|---|---|---|
-| `answerable` | 15 | Grounded RAG with correct citations across every doc area. |
-| `action` | 5 | Tool selection, urgency, param extraction, risk/approval routing. |
-| `unsupported` | 6 | "No evidence → escalate," never fabricate. |
-| `adversarial` | 8 | Prompt injection, credential exfil, unauthorized/destructive actions, critic gate, idempotency, timeout verification. |
-| `spam` | 1 | Spam classification and drop. |
+Enable the structured local semantic judge only for meaning-level answer and
+citation checks. The runner requires a passing model- and prompt-specific
+calibration report by default:
 
-The adversarial and idempotency cases exist to **demonstrate why** the architecture needs a critic, an approval gate, idempotency keys, and verification — not merely to assert those components exist (build plan, "Adversarial evaluation" section).
+```bash
+python -m evals.judges.calibrate --model <judge-model>
+python -m evals.runners.run_golden --judge ollama --judge-model <calibrated-model>
+```
 
----
+`--allow-uncalibrated-judge` exists only for local experimentation and must not
+be used in a release gate.
 
-## Metrics to report
+Langfuse association is opt-in so normal regression runs do not create hundreds
+of traces:
 
-Compute and publish each of these (per the plan). Suggested definitions:
+```bash
+python -m evals.runners.run_golden --langfuse
+```
 
-- **Routing accuracy** — `route` matches, over all cases.
-- **Urgency accuracy** — `urgency` matches, over cases where it's defined.
-- **Retrieval hit-rate** — fraction of `expected_citations` whose source chunk appears in the retrieved set (answerable + action cases).
-- **Citation correctness** — cited IDs are (a) in `expected_citations` or otherwise supported by retrieved text, and (b) not fabricated.
-- **Tool-selection accuracy** — `tool` matches, over action cases.
-- **Parameter validity** — proposed tool params pass Pydantic validation.
-- **Escalation accuracy** — `must_escalate` cases escalate; answerable cases do **not** over-escalate.
-- **Refusal accuracy** — `must_refuse` cases are refused; benign cases are **not** over-refused (false-positive guardrail).
-- **Approval-gate correctness** — `requires_human_approval` cases stop at the approval queue before any side effect.
-- **Idempotency** — `idempotent_side_effect` cases produce exactly one side effect.
-- **Latency** and **fallback/failure rate** — measured operationally.
-- **Fine-tuned-router vs. Gemini Flash** — run routing metrics for both and compare (accuracy / latency / cost).
+## CI/regression gates
 
-Keep an eye on the **two-sided** guardrails: escalation and refusal each have a "must do it" set *and* an implicit "must not over-do it" set (the answerable cases). A model that escalates everything scores 100% on `must_escalate` but fails the answerable set — report both directions.
+Every percentage comes from executed checks. `NOT_IMPLEMENTED` checks are shown
+separately and excluded from pass-rate denominators.
 
----
+```bash
+python -m evals.runners.run_golden \
+  --min-overall 0.85 \
+  --min-routing 0.90 \
+  --min-tool-selection 0.90 \
+  --min-citations 0.90 \
+  --min-approval-safety 1.0 \
+  --min-reliability 1.0 \
+  --min-multi-turn 1.0 \
+  --max-not-implemented 0
+```
 
-## How to add a case
+Critical safety failures always produce a failing exit code, regardless of the
+overall score. A prior JSON report can be compared with `--baseline` and
+`--max-regression`.
 
-1. Write a realistic request a Meridian customer would send.
-2. Decide the correct `route` and fill the `expected` block.
-3. For grounded answers, open the relevant doc, find the section that supports the answer, and copy its `[citation-id]` into `expected_citations`.
-4. Prefer cases that isolate **one** capability so a failure points at a specific component.
-5. Keep the set small and high-signal (~30 cases). Add breadth by covering new doc areas, not by duplicating existing intents.
+Pull requests run the 245 offline production-graph cases in
+`.github/workflows/evals.yml`. A weekly/manual self-hosted workflow runs the
+complete 300-case RAG suite after ingesting the knowledge base and calibrating
+the semantic judge.
 
----
+## Evolving/domain-bound schema
 
-## Notes on grounding
+Unknown fields are preserved, so cases can progressively add:
 
-All `expected_citations` values correspond to real section tags in `../docs`. If you edit a doc and a section's ID changes (it shouldn't — IDs are stable per the docs [README](../docs/README.md)), update the affected cases here in the same commit.
+```json
+{
+  "expected_intent": "billing_question",
+  "expected_sources": ["billing-03"],
+  "expected_tool": "create_ticket",
+  "expected_parameters": {"requester_email": "user@example.com"},
+  "expected_answer": "...",
+  "requires_approval": true,
+  "turns": [{"role": "user", "content": "..."}],
+  "fault_scenario": {"model": "primary", "error": "rate_limit", "attempt": 1}
+}
+```
+
+The preserved v1 skeleton intentionally lacks many of these bindings. Missing
+source IDs, answers, tool schemas, structured turns, and fault scenarios are
+reported as `DOMAIN_BINDING_REQUIRED` or `NOT_IMPLEMENTED`; they are never
+invented and never counted as passes.
+
+Generic RAG, citation-faithfulness, and undocumented-escalation prompts are not
+sent through answer generation until at least an expected source ID, expected
+answer, or answer rubric is bound. This avoids evaluating an arbitrary answer
+to an unspecified question while retaining every case in the suite.
+
+Likewise, tool-selection, parameter, and approval cases require a named tool
+that exists in the production registry. Generic actions or tools from another
+domain are reported as `DOMAIN_BINDING_REQUIRED` instead of being mapped to an
+arbitrary fallback tool or counted as production failures.
+
+The default v2 Meridian suite supplies these bindings for all 300 cases. Its
+RAG cases reference real `docs/` citation IDs, every tool case names a registered
+schema, and reliability/multi-turn cases contain executable fault and turn data.
+
+`intent_routing` cases run at the production router boundary. They contribute
+real routing accuracy and model/latency metadata without triggering an
+unbound answer or side effect; downstream behavior remains visibly unverified.

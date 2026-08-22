@@ -1,0 +1,257 @@
+{
+  "generated_at": "2026-08-22T03:39:13.450891+00:00",
+  "target_company": "Render",
+  "product": "Render",
+  "database": "sentinel_render_demo",
+  "corpus_dir": "C:\\Users\\rocki\\OneDrive\\Desktop\\Sentinel\\docs\\targets\\render",
+  "method": "application router -> hybrid retrieval -> cited answer",
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "pass_rate": 1.0
+  },
+  "results": [
+    {
+      "id": "RENDER-001",
+      "ticket": "My custom domain verification keeps failing and the DNS zone still has an AAAA record. What should I change, and what happens after verification?",
+      "official_url": "https://render.com/docs/custom-domains",
+      "expected_source": "rnd-01",
+      "allowed_sources": [
+        "rnd-01",
+        "rnd-02"
+      ],
+      "expected_answer": "Remove the AAAA record, confirm the required DNS records, wait for propagation, and retry verification; managed TLS follows verification.",
+      "status": "PASSED",
+      "checks": {
+        "routed_to_answer": true,
+        "answered_without_escalation": true,
+        "expected_source_retrieved": true,
+        "expected_source_cited": true,
+        "citations_grounded": true,
+        "citations_relevant": true,
+        "required_concepts_present": true,
+        "forbidden_phrases_absent": true
+      },
+      "missing_concepts": [],
+      "route": "answer",
+      "router_intent": "how_to",
+      "escalated": false,
+      "reason": "answered",
+      "answer": "Remove the AAAA record from the DNS zone [rnd-01]. After successful verification, Render issues and renews a managed TLS certificate and redirects HTTP traffic to HTTPS [rnd-02]. A newly verified domain can briefly return a 502 while routing rules finish updating; wait a few minutes and retry [rnd-02].\nSources: [rnd-01], [rnd-02]",
+      "citations": [
+        "rnd-01",
+        "rnd-02"
+      ],
+      "retrieved_sources": [
+        "rnd-01",
+        "rnd-02",
+        "rnd-03",
+        "rnd-07"
+      ],
+      "duration_ms": 98060,
+      "usage": {
+        "llm_calls": 2,
+        "prompt_tokens": 1599,
+        "completion_tokens": 105,
+        "total_tokens": 1704,
+        "cost_usd": 0.0,
+        "latency_ms": 98060,
+        "model": "llama3.1:8b"
+      },
+      "forbidden_phrases_found": []
+    },
+    {
+      "id": "RENDER-002",
+      "ticket": "Our new web-service deploy is failing its HTTP health check. What response counts as healthy, and will Render replace the currently working version?",
+      "official_url": "https://render.com/docs/health-checks",
+      "expected_source": "rnd-03",
+      "allowed_sources": [
+        "rnd-03",
+        "rnd-04"
+      ],
+      "expected_answer": "A 2xx or 3xx response within five seconds is healthy. A replacement that never becomes healthy is cancelled while the existing instance keeps traffic.",
+      "status": "PASSED",
+      "checks": {
+        "routed_to_answer": true,
+        "answered_without_escalation": true,
+        "expected_source_retrieved": true,
+        "expected_source_cited": true,
+        "citations_grounded": true,
+        "citations_relevant": true,
+        "required_concepts_present": true,
+        "forbidden_phrases_absent": true
+      },
+      "missing_concepts": [],
+      "route": "answer",
+      "router_intent": "troubleshooting",
+      "escalated": false,
+      "reason": "answered",
+      "answer": "A response counts as healthy when it returns a `2xx` or `3xx` status within five seconds [rnd-03]. Render will not replace the currently working version [rnd-04].\n\nSources: [rnd-03], [rnd-04]",
+      "citations": [
+        "rnd-03",
+        "rnd-04"
+      ],
+      "retrieved_sources": [
+        "rnd-03",
+        "rnd-04",
+        "rnd-02",
+        "rnd-01"
+      ],
+      "duration_ms": 55697,
+      "usage": {
+        "llm_calls": 2,
+        "prompt_tokens": 1695,
+        "completion_tokens": 81,
+        "total_tokens": 1776,
+        "cost_usd": 0.0,
+        "latency_ms": 55697,
+        "model": "llama3.1:8b"
+      },
+      "forbidden_phrases_found": []
+    },
+    {
+      "id": "RENDER-003",
+      "ticket": "I changed an environment variable and want the running service to pick it up without rebuilding the code. Which save option should I use?",
+      "official_url": "https://render.com/docs/configure-environment-variables",
+      "expected_source": "rnd-05",
+      "allowed_sources": [
+        "rnd-05"
+      ],
+      "expected_answer": "Use Save and deploy, which redeploys the existing build with the new environment values instead of creating a new build.",
+      "status": "PASSED",
+      "checks": {
+        "routed_to_answer": true,
+        "answered_without_escalation": true,
+        "expected_source_retrieved": true,
+        "expected_source_cited": true,
+        "citations_grounded": true,
+        "citations_relevant": true,
+        "required_concepts_present": true,
+        "forbidden_phrases_absent": true
+      },
+      "missing_concepts": [],
+      "route": "answer",
+      "router_intent": "how_to",
+      "escalated": false,
+      "reason": "answered",
+      "answer": "To pick up the changed environment variable without rebuilding the code, you should use **Save and deploy** [rnd-05]. This option redeploys the existing build with the new values, avoiding a rebuild.\n\nSources: [rnd-05]",
+      "citations": [
+        "rnd-05"
+      ],
+      "retrieved_sources": [
+        "rnd-05",
+        "rnd-03",
+        "rnd-08",
+        "rnd-07"
+      ],
+      "duration_ms": 55091,
+      "usage": {
+        "llm_calls": 2,
+        "prompt_tokens": 1636,
+        "completion_tokens": 77,
+        "total_tokens": 1713,
+        "cost_usd": 0.0,
+        "latency_ms": 55091,
+        "model": "llama3.1:8b"
+      },
+      "forbidden_phrases_found": []
+    },
+    {
+      "id": "RENDER-004",
+      "ticket": "Can a Hobby workspace restore a paid Render Postgres database to five days ago? Would upgrading to Pro today make that older restore available?",
+      "official_url": "https://render.com/docs/postgresql-backups",
+      "expected_source": "rnd-06",
+      "allowed_sources": [
+        "rnd-06"
+      ],
+      "expected_answer": "No. Hobby has a three-day PITR window, and an upgrade to Pro extends the window only going forward rather than backfilling older history.",
+      "status": "PASSED",
+      "checks": {
+        "routed_to_answer": true,
+        "answered_without_escalation": true,
+        "expected_source_retrieved": true,
+        "expected_source_cited": true,
+        "citations_grounded": true,
+        "citations_relevant": true,
+        "required_concepts_present": true,
+        "forbidden_phrases_absent": true
+      },
+      "missing_concepts": [],
+      "route": "answer",
+      "router_intent": "how_to",
+      "escalated": false,
+      "reason": "answered",
+      "answer": "A Hobby workspace can restore a paid Render Postgres database to the past three days [rnd-06]. Upgrading to Pro today would extend the recovery window to seven days, but it would not make the older restore available [rnd-06].\nSources: [rnd-06]",
+      "citations": [
+        "rnd-06"
+      ],
+      "retrieved_sources": [
+        "rnd-06",
+        "rnd-07"
+      ],
+      "duration_ms": 55849,
+      "usage": {
+        "llm_calls": 2,
+        "prompt_tokens": 1483,
+        "completion_tokens": 84,
+        "total_tokens": 1567,
+        "cost_usd": 0.0,
+        "latency_ms": 55849,
+        "model": "llama3.1:8b"
+      },
+      "forbidden_phrases_found": []
+    },
+    {
+      "id": "RENDER-005",
+      "ticket": "We need to move an existing Render service from Oregon to Frankfurt. Can its region be changed in place, or what migration path do the docs require?",
+      "official_url": "https://render.com/docs/regions",
+      "expected_source": "rnd-08",
+      "allowed_sources": [
+        "rnd-08"
+      ],
+      "expected_answer": "Render does not support an in-place region change. Create a new resource in Frankfurt and migrate configuration and data.",
+      "status": "PASSED",
+      "checks": {
+        "routed_to_answer": true,
+        "answered_without_escalation": true,
+        "expected_source_retrieved": true,
+        "expected_source_cited": true,
+        "citations_grounded": true,
+        "citations_relevant": true,
+        "required_concepts_present": true,
+        "forbidden_phrases_absent": true
+      },
+      "missing_concepts": [],
+      "route": "answer",
+      "router_intent": "documentation_question",
+      "escalated": false,
+      "reason": "answered",
+      "answer": "To move an existing Render service from Oregon to Frankfurt, you cannot change the region in place [rnd-08]. Instead, you need to create a new resource in the destination region and migrate the configuration and data [rnd-08]. Private networking is regional, so services in different regions cannot communicate through the same private network and need secured public communication instead [rnd-08].\n\nSources: [rnd-08]",
+      "citations": [
+        "rnd-08"
+      ],
+      "retrieved_sources": [
+        "rnd-08",
+        "rnd-05",
+        "rnd-03"
+      ],
+      "duration_ms": 52830,
+      "usage": {
+        "llm_calls": 1,
+        "prompt_tokens": 816,
+        "completion_tokens": 83,
+        "total_tokens": 899,
+        "cost_usd": 0.0,
+        "latency_ms": 52830,
+        "model": "llama3.1:8b"
+      },
+      "forbidden_phrases_found": []
+    }
+  ],
+  "limitations": [
+    "The corpus is a hand-curated, attributed, paraphrased snapshot, not Render's complete documentation.",
+    "Deterministic checks validate routing, retrieval, citation-ID membership, and required or forbidden phrases; they do not prove semantic entailment or human support quality.",
+    "No Render account, private data, or production API was accessed."
+  ]
+}

@@ -5,16 +5,14 @@ import type { TriageRecord } from "@/lib/types";
 import { RouteBadge } from "./route-badge";
 import { EvidenceList } from "./evidence-list";
 
-const CITATION = /\[([a-z]+-\d+)\]/g;
-
 /** Render answer text with [citation-id] tokens turned into inline pills. */
 function AnswerText({ text }: { text: string }) {
+  const citation = /\[([a-z]+-\d+)\]/g;
   const parts: React.ReactNode[] = [];
   let last = 0;
   let m: RegExpExecArray | null;
-  CITATION.lastIndex = 0;
   let k = 0;
-  while ((m = CITATION.exec(text)) !== null) {
+  while ((m = citation.exec(text)) !== null) {
     if (m.index > last) parts.push(<Fragment key={k++}>{text.slice(last, m.index)}</Fragment>);
     parts.push(
       <code
@@ -64,7 +62,13 @@ export function TriageRecordCard({ record }: { record: TriageRecord }) {
           <Meta label="urgency" value={record.urgency} color={urgencyColor(record.urgency)} />
           <Meta label="intent" value={record.intent} />
           <Meta label="reason" value={record.reason} />
-          <span className="ml-auto font-mono text-xs text-faint">{record.latency_ms} ms</span>
+          <span className="ml-auto flex items-center gap-2 font-mono text-xs text-faint">
+            <span>{record.total_tokens.toLocaleString()} tok</span>
+            <span className="text-edge-strong">·</span>
+            <span>{record.latency_ms.toLocaleString()} ms</span>
+            <span className="text-edge-strong">·</span>
+            <span>{record.cost_usd === 0 ? "$0.00" : `$${record.cost_usd.toFixed(4)}`}</span>
+          </span>
         </div>
 
         <p className="text-sm text-dim">{meta.blurb}</p>
@@ -106,8 +110,16 @@ export function TriageRecordCard({ record }: { record: TriageRecord }) {
         {record.sources.length > 0 && (
           <>
             <div className="h-px w-full bg-edge" />
-            <EvidenceList sources={record.sources} />
+            <EvidenceList sources={record.sources} confidenceMin={record.confidence_min} />
           </>
+        )}
+
+        {record.run_id && (
+          <div className="flex justify-end border-t border-edge pt-4">
+            <Link href={`/requests/${record.run_id}`} className="font-mono text-xs text-brand transition hover:text-fg">
+              Open persisted trace · run #{record.run_id} →
+            </Link>
+          </div>
         )}
       </div>
     </article>

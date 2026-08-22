@@ -1,192 +1,265 @@
-<h1 align="center">🛰️ Sentinel</h1>
+<h1 align="center">Sentinel</h1>
 
 <p align="center">
-  <b>An AI support agent that cites its sources — or honestly says it doesn't know.</b><br/>
-  <i>"LLM brain, n8n hands."</i> Most demos build a chatbot that <b>talks</b>. Sentinel is built to <b>act</b>.
+  <strong>An evidence-first AI support operator: cited answers, controlled actions, and human approval for risk.</strong><br />
+  <em>LLM brain. n8n hands. A complete audit trail.</em>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python"/>
-  <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI"/>
-  <img src="https://img.shields.io/badge/Postgres-pgvector-4169E1?logo=postgresql&logoColor=white" alt="pgvector"/>
-  <img src="https://img.shields.io/badge/Ollama-local%20LLMs-000000?logo=ollama&logoColor=white" alt="Ollama"/>
-  <img src="https://img.shields.io/badge/Docker-compose-2496ED?logo=docker&logoColor=white" alt="Docker"/>
-  <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT"/>
-  <img src="https://img.shields.io/badge/cost-%E2%82%B90-brightgreen" alt="Zero cost"/>
+  <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white" alt="Python 3.12+" />
+  <img src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/API-v0.2-009688?logo=fastapi&logoColor=white" alt="FastAPI API version 0.2" />
+  <img src="https://img.shields.io/badge/Postgres-pgvector-4169E1?logo=postgresql&logoColor=white" alt="Postgres with pgvector" />
+  <img src="https://img.shields.io/badge/Ollama-local-000000?logo=ollama&logoColor=white" alt="Ollama" />
+  <img src="https://img.shields.io/badge/Gemini-supported-4285F4?logo=google&logoColor=white" alt="Gemini API supported" />
+  <img src="https://img.shields.io/badge/evals-245%2F245-38D6A3" alt="245 of 245 deterministic evals passing" />
 </p>
 
----
+Sentinel receives a support request, decides whether to answer, act, escalate, or reject spam, and exposes the evidence behind that decision. Answers are grounded in retrieved documentation. Low-risk actions run through n8n. High-risk actions wait in an approval queue. Every route, citation, tool decision, token, cost, and approval is inspectable in the operator console.
 
-## The idea in one breath
+> The central contract is simple: **prove the answer with citations, or hand it to a human.**
 
-Large language models are confident liars when you ask them about docs they've never seen. Sentinel fixes that the honest way: it **retrieves the relevant passages from a knowledge base, answers only from them, and cites the exact section it used** — and when the answer genuinely isn't in the docs, it **escalates to a human instead of making something up**.
+## Live console walkthrough
 
-That single behaviour — *grounded-with-citations, or escalate* — is the whole point, and it's what separates this from the hundredth "I wrapped an LLM" project.
+The capture below was recorded against the local stack. It submits a real documentation question, returns a grounded answer, opens its persisted trace, and finishes on the generated evaluation report.
 
-```
-"How do I rotate my API key?"   ->  grounded answer, cites [key-06]        ✅
-"What will pricing be in 2027?" ->  "not in the docs" -> escalates          ✅  (no hallucination)
-```
+![Sentinel resolving a grounded support request](./assets/demo/sentinel-demo.gif)
 
----
+## What is working
 
-## Why it's different
+- **Evidence-backed answers:** hybrid vector and full-text retrieval, Reciprocal Rank Fusion, a confidence gate, and stable citation IDs.
+- **Agentic routing:** a LangGraph pipeline routes requests to `answer`, `action`, `escalate`, or `spam`.
+- **Controlled tools:** an allowlisted registry selects and validates n8n tools. Repeated low-risk requests are idempotent.
+- **Human approval:** financial and other high-risk actions are queued; approval triggers the tool, while rejection closes the request safely.
+- **Operational visibility:** Postgres-backed run history, per-step audit events, token/cost accounting, and optional self-hosted Langfuse traces.
+- **Live operator console:** inbox, request trace, approval queue, cost and usage, evaluation results, and a request console.
+- **Release evidence:** deterministic evaluation gates run on every pull request; a calibrated LLM judge separately scores answer correctness and citation faithfulness.
 
-- 🎯 **Citations are mandatory.** Every factual sentence points at a real doc section. Fabricated citations are stripped out.
-- 🚪 **It knows when to shut up.** A confidence gate + a strict prompt mean low-evidence questions escalate instead of getting guessed at.
-- 🔀 **Hybrid retrieval, done right.** Vector similarity *and* keyword search, merged with Reciprocal Rank Fusion — because meaning-search and exact-term-search each have a blind spot.
-- 📏 **Measured, not vibe-checked.** A hand-labelled 35-case golden set and per-capability metrics, including a *two-sided* escalation guardrail (it also punishes over-escalation).
-- 🧪 **A real fine-tuning experiment — reported honestly** (including a negative result). See below.
-- 💸 **₹0 to run.** Everything is local: Dockerized Postgres + pgvector, and Ollama for embeddings and generation.
+## Architecture
 
----
+```mermaid
+flowchart LR
+    A[Email / web / WhatsApp] --> B[Next.js operator console]
+    B --> C[FastAPI]
+    C --> D[LangGraph router]
 
-## How it works
+    D -->|answer| E[Hybrid retrieval]
+    E --> F[(Postgres + pgvector)]
+    E --> G[Gemini or Ollama answerer]
+    G --> H[Grounded answer + citations]
 
-```
-                          WRITE PATH (once)
-  docs/*.md ─► heading-aware chunker ─► embed (nomic) ─► Postgres + pgvector
-              (keeps [citation-id]s)     search_document:     (chunks table)
+    D -->|action| I[Allowlisted tool registry]
+    I --> J{Risk gate}
+    J -->|low / medium| K[n8n workflow]
+    J -->|high| L[Human approval queue]
+    L -->|approved| K
 
-                          READ PATH (per question)
-  question ─► embed (search_query:) ─┬─► vector search (cosine, top-20) ─┐
-                                     └─► full-text search (top-20) ──────┘
-                                                   │
-                                        Reciprocal Rank Fusion
-                                                   │
-                                             top-5 chunks
-                                                   │
-                                    cosine confidence gate (≥ 0.55?)
-                                          │                    │
-                                        No│                    │Yes
-                                          ▼                    ▼
-                                   escalate to human    LLM answers using ONLY
-                                                        the sources, cites [key-06]
+    D -->|unknown / unsafe| M[Escalation]
+    D -->|spam| N[Safe refusal]
+
+    C -. run, cost, audit .-> F
+    C -. optional trace .-> O[Langfuse]
 ```
 
-Under the hood: **heading-aware chunking** so each retrieved unit maps to exactly one citable section; **nomic-embed-text** with its required `search_document:` / `search_query:` task prefixes; **pgvector** (HNSW) for vectors and a generated **tsvector** (GIN) for keyword search; and a **citations-or-escalate** answerer on top of `llama3.2:3b`.
+The knowledge base is **Meridian**, a fictional SaaS platform with stable section IDs such as `[key-06]`. Keeping the corpus deterministic makes every citation expectation reproducible. The same ingestion pipeline can index a different Markdown corpus.
 
----
+## Measured results
 
-## Does it actually work?
+Latest checked-in deterministic report: **21 August 2026**.
 
-Everything below is measured against a held-out, hand-labelled golden set of **35 cases** (`evals/golden.json`). No cherry-picking, no training on the test set.
+| Metric | Result |
+|---|---:|
+| Cases executed | **245 / 245** |
+| Overall pass rate | **100%** |
+| Routing | **245 / 245** |
+| Citation checks | **90 / 90** |
+| Tool selection | **120 / 120** |
+| Approval safety | **282 / 282** |
+| Reliability fallback | **55 / 55** |
+| Adversarial safety | **160 / 160** |
+| Multi-turn behavior | **40 / 40** |
+| Critical policy failures | **0** |
+| Unimplemented checks | **0** |
 
-| Capability | Result |
-|---|---|
-| Grounded answers cite the correct section | ✅ e.g. `ans-01` → `[key-06]` |
-| Unanswerable questions escalate (no hallucination) | ✅ e.g. `uns-01` |
-| **Router accuracy** (answer / action / escalate / spam) | **88.6%** (31/35) |
-| Urgency accuracy | 82.9% |
-| Escalation recall | 81.8% |
-| **Over-escalation on answerable cases** | **0%** |
+These are capability checks, so some cases contribute to more than one row. See the [complete generated score table](./evals/reports/latest.md) and [evaluation design](./evals/README.md).
 
-*Ingest produces 175 chunks from 16 documents.*
+The repository also contains a **300-case semantic suite**. Its structured local judge scores correctness, citation faithfulness, unsupported claims, policy compliance, and clarification behavior. Judge output is accepted only after the chosen model passes fixed calibration anchors. The checked-in table above is the deterministic PR gate; it is not presented as an LLM-judge result.
 
----
+### Target-company documentation test
 
-## The fine-tuning experiment (and an honest result)
+Sentinel was also tested independently against eight hand-curated, attributed sections derived from Render's public documentation. The same five frozen support tickets improved from **2 / 5** to **5 / 5** under an eight-check deterministic contract after a combined prompt, output-parsing, and model change. The full [Render public-docs case study](./case-studies/render-public-docs.md) includes the fresh-reader failure it uncovered and links every numerical claim to the corpus, rubric, and saved per-ticket reports. This is an independent demonstration, not a Render engagement or endorsement.
 
-I also fine-tuned a **1B model with LoRA** (on a free Kaggle T4) to try to beat the prompted router, with a clean, leakage-free setup (synthetic training data, held-out golden set, identical eval).
+## Reliability evidence
 
-> **Result: the LoRA router scored 85.7% — it did *not* beat the 88.6% prompted baseline (−2.9 pts).**
+Faults are injected at controlled boundaries so the release suite can prove behavior without taking down a developer's machine.
 
-That's a *feature of the writeup*, not a failure. With a strong baseline, a tiny model, and ~340 synthetic examples, prompting winning is the expected outcome — and reporting a negative result honestly is far more credible than a suspiciously perfect one. The value is the reproducible methodology and the demonstrated PEFT/LoRA skill. Details in [`finetune/README.md`](./finetune/README.md).
-
----
-
-## Tech stack
-
-| Layer | Choice | Why |
+| Injected condition | Required behavior | Current evidence |
 |---|---|---|
-| Vector store | **Postgres + pgvector** | One service, transactional consistency, trivial backups. |
-| Embeddings | **Ollama `nomic-embed-text`** (768-d) | Local, free, no rate limits. |
-| Generation | **Ollama `llama3.2:3b`** | Local, free, laptop-friendly. |
-| API | **FastAPI + Uvicorn** | Typed, auto-docs, production-shaped. |
-| DB driver | **psycopg 3** | Bundled libpq, no system Postgres needed. |
-| Fine-tuning | **PEFT LoRA** on Kaggle T4 | Genuinely free GPU. |
-| Orchestration | **Docker Compose** | `docker compose up` and you're running. |
+| Router model unavailable | Fail closed to escalation | Regression test + golden cases + physical shutdown test |
+| Malformed router response | Fail closed to escalation | Regression test + golden reliability cases |
+| Tool timeout | Do not report a successful action; use the defined fallback | Golden reliability cases |
+| Unsafe tool proposal | Block before execution | Critic and safety regression tests |
+| Database unreachable | Fail quickly to human escalation; never fabricate an answer | Regression test + physical shutdown test |
 
----
+The latest suite passes **55 / 55 reliability-fallback checks**. The repository also contains opt-in tests that physically stop and restore local Ollama and the exact `sentinel-db` Compose service. They are excluded from ordinary test runs so a pull request cannot unexpectedly stop a developer's services.
+
+Run the physical shutdown checks on a controlled local machine after starting Ollama and `docker compose up -d --wait db`:
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path backend).Path
+$env:RUN_LIVE_SHUTDOWN_TESTS = "1"
+python -m pytest -q -s backend/tests/test_live_dependency_shutdown.py
+```
+
+On non-Windows hosts, also provide `OLLAMA_STOP_COMMAND` and `OLLAMA_START_COMMAND`. Both tests restore their dependency in `finally`; the Postgres test additionally verifies that the chunk count is unchanged after restart.
 
 ## Quickstart
 
-**Prerequisites:** Docker Desktop, [Ollama](https://ollama.com), and Python 3.11+.
+### Prerequisites
+
+- Docker Desktop with Compose
+- [Ollama](https://ollama.com)
+- Python 3.12 or newer
+- Node.js 20 or newer
+
+### 1. Configure and start the services
 
 ```bash
-# 1) pull the local models
-ollama pull nomic-embed-text
-ollama pull llama3.2:3b
-
-# 2) start Postgres + pgvector
 cp .env.example .env
-docker compose up -d
+ollama pull nomic-embed-text
+# Only needed when LLM_PROVIDER=ollama:
+ollama pull llama3.2:3b
+docker compose up -d --wait
+```
 
-# 3) set up the backend
+This starts Postgres on `5432`, n8n on `5679`, and Langfuse on `3001`. Values can be changed in `.env`.
+
+Sentinel supports independent chat and embedding providers. This hybrid keeps retrieval local and moves the heavier reasoning calls off the laptop:
+
+```dotenv
+LLM_PROVIDER=gemini
+CHAT_MODEL=gemini-2.5-flash
+GEMINI_API_KEY=your-backend-only-key
+EMBED_PROVIDER=ollama
+EMBED_MODEL=nomic-embed-text
+```
+
+Keep `GEMINI_API_KEY` only in the root `.env`; it is ignored by Git and must never use a `NEXT_PUBLIC_` prefix. Set both providers to `ollama` for a fully local deployment. Gemini embeddings are supported at 768 dimensions, but switching embedding providers requires a complete re-ingestion because vectors from different models cannot be mixed.
+
+### 2. Prepare and run the API
+
+```bash
 cd backend
 python -m venv .venv
-.venv/Scripts/pip install -r requirements.txt      # (.venv/bin on macOS/Linux)
 
-# 4) build the index and ask a question
-.venv/Scripts/python -m app.cli init
-.venv/Scripts/python -m app.cli ingest --reset      # -> 175 chunks
-.venv/Scripts/python -m app.cli ask "how do I rotate an API key?"
+# Windows
+.venv\Scripts\activate
 
-# 5) or run it as an API
-.venv/Scripts/uvicorn app.main:app --reload --port 8000
-#   then open http://localhost:8000/docs  and POST to /ask
+# macOS / Linux
+# source .venv/bin/activate
+
+python -m pip install -r requirements.txt
+python -m app.cli init
+python -m app.cli ingest --reset
+uvicorn app.main:app --reload --port 8000
 ```
 
-```jsonc
-// POST /ask
-{ "query": "how do I rotate an API key?" }
-// -> { "text": "... under Settings → API Keys [key-06] ...",
-//      "escalated": false, "citations": ["key-06"], "sources": [ ... ] }
+The API is now available at [http://localhost:8000/docs](http://localhost:8000/docs).
+
+### 3. Run the operator console
+
+In another terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
----
+Open [http://localhost:3000](http://localhost:3000). The frontend's same-origin handlers proxy to `SENTINEL_API_URL`, which defaults to `http://localhost:8000`. Create `frontend/.env.local` only when the API uses a different address:
 
-## Project structure
-
-```
-sentinel-rag/
-├── backend/app/         # the RAG core
-│   ├── chunking.py      #   heading-aware Markdown chunking (keeps citation IDs)
-│   ├── embed.py         #   Ollama embeddings + chat (stdlib HTTP)
-│   ├── ingest.py        #   docs -> chunk -> embed -> pgvector (idempotent)
-│   ├── retrieve.py      #   hybrid vector + full-text search, RRF fusion
-│   ├── answer.py        #   cited answers, citations-or-escalate
-│   ├── router.py        #   triage: answer / action / escalate / spam
-│   ├── eval_routing.py  #   scores the router vs. the golden set
-│   ├── cli.py           #   init | ingest | search | route | ask
-│   └── main.py          #   FastAPI: POST /ask, GET /health
-├── docs/                # Meridian — a coherent fictional SaaS KB (the corpus)
-├── evals/               # golden.json (35 labelled cases) + metrics
-├── finetune/            # the LoRA router experiment (dataset gen + Kaggle notebook)
-├── docker-compose.yml   # Postgres + pgvector
-└── context.md           # project orientation (status, decisions, gotchas)
+```dotenv
+SENTINEL_API_URL=http://localhost:8199
 ```
 
----
+The answer path is ready after ingestion. To execute ticket and invoice workflows, import and activate the supplied n8n workflows using the [n8n setup guide](./n8n/README.md).
 
-## Roadmap
+## Operator views
 
-- [x] **Week 1 — RAG core:** hybrid retrieval, cited answers, eval harness, HTTP endpoint.
-- [x] Router + baseline (88.6%) and a LoRA fine-tuning experiment.
-- [ ] **Week 2 — Action:** a LangGraph loop + a tool registry, with the first real **n8n** tool (`create_ticket` / `send_reply`) — the "hands".
-- [ ] **Week 3 — Safety & observability:** human-approval queue, audit log, Langfuse tracing.
-- [ ] **Week 4 — Polish:** evals in CI, cost dashboard, a live demo.
+| Route | Purpose |
+|---|---|
+| `/` | Product overview, live system configuration, and latest eval result |
+| `/inbox` | Persisted requests with route and status filters |
+| `/requests/:id` | One request's citations, usage, decision, and audit trail |
+| `/approvals` | Human review for high-risk actions |
+| `/usage` | Live request, latency, model, channel, cost, and eval metrics |
+| `/console` | Submit a request to the production graph |
 
----
+The interface does not substitute fake traffic or sample metrics. If the API is unavailable, live values remain unknown and the console shows an offline state.
 
-## A note on the knowledge base
+## API surface
 
-The corpus is **Meridian**, a fictional cloud platform invented so the docs are fully consistent and the eval set is deterministic. Every section heading carries a stable `[citation-id]` (e.g. `[key-06]`), which is exactly what retrieval cites and what the golden set checks against. Point the ingest pipeline at any real docs and the same pipeline works.
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/health` | Service health |
+| `GET` | `/system` | Runtime model, retrieval, tool, and tracing configuration |
+| `POST` | `/ask` | Retrieval-augmented answer or escalation |
+| `POST` | `/triage` | Full routing and action graph |
+| `GET` | `/runs` | Recent persisted runs |
+| `GET` | `/runs/{id}` | Run detail and audit steps |
+| `GET` | `/stats` | Live operational aggregates |
+| `GET` | `/approvals` | Approval queue |
+| `POST` | `/approvals/{id}/approve` | Approve and trigger a queued tool |
+| `POST` | `/approvals/{id}/reject` | Reject without execution |
 
----
+## Run the evaluations
+
+The fast deterministic gate exercises the production graph with unsafe external boundaries replaced by in-memory recorders:
+
+```bash
+python -m evals.runners.run_golden
+```
+
+For local semantic scoring, first pull a stronger judge model, calibrate that exact model and prompt, and then run the suite:
+
+```bash
+ollama pull llama3.1:8b
+python -m evals.judges.calibrate --model llama3.1:8b
+python -m evals.runners.run_golden --judge ollama --judge-model llama3.1:8b
+```
+
+The pull-request workflow publishes the generated Markdown score table on the GitHub Actions run summary and uploads the full JSON/Markdown reports. A weekly or manually triggered self-hosted workflow ingests the knowledge base and runs all 300 cases with the calibrated semantic judge.
+
+## Repository map
+
+```text
+Sentinel/
+├── backend/app/                 FastAPI, graph, RAG, tools, approvals, audit
+├── backend/tests/               safety, graph, conversation, tool and trace tests
+├── frontend/                    Next.js operator console and API proxy routes
+├── docs/                        Meridian knowledge base
+├── evals/                       300-case dataset, judges, runners and reports
+├── n8n/                         SQL, workflow exports and setup guide
+├── finetune/                    reproducible LoRA routing experiment
+├── .github/workflows/           pull-request and full semantic evaluation gates
+└── docker-compose.yml           Postgres, n8n and self-hosted Langfuse
+```
+
+## Delivery status
+
+- [x] LLM-as-judge implementation and model-specific calibration
+- [x] Deterministic evaluations in pull-request CI with a visible score table
+- [x] Deterministic reliability and safety fault injection
+- [x] Current README, architecture diagram, quickstart, evidence table, and live demo GIF
+- [x] Physical Ollama and Postgres shutdown integration tests
+- [x] Five-ticket target-company public-docs demo and final case study
+- [x] Evidence-mapped project bullets
+- [ ] Public demo link
+
+Only a public deployment destination remains; no public endpoint is implied by the current repository.
 
 ## License
 
 [MIT](./LICENSE) © 2026 Achal Verma
 
-<p align="center"><sub>Built as a portfolio project — every number in this README is reproducible from the code.</sub></p>
+<p align="center"><sub>Every numerical claim above links back to a generated report or executable test.</sub></p>

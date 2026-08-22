@@ -105,10 +105,11 @@ def main() -> int:
 
         tools.invoke = raise_tool
         out = action_node(state)
-        fails += _check("action_node degrades to approval queue on ToolError",
-                        out["action"]["status"] == "pending_approval"
-                        and out["reason"] == "action_tool_unavailable"
-                        and out["escalated"] is False)
+        fails += _check("action_node reports ToolError without false success",
+                        out["action"]["status"] == "failed"
+                        and out["reason"] == "action_tool_failed"
+                        and out["escalated"] is True
+                        and "did not report" in out["answer"])
     finally:
         tools.invoke = orig_invoke
 
@@ -123,9 +124,21 @@ def main() -> int:
     fails += _check("select() routes billing_dispute -> cancel_invoice",
                     tools.select(Decision("action", "billing_dispute", "medium", True)).name
                     == "cancel_invoice")
-    fails += _check("select() defaults unknown intent -> create_ticket",
+    fails += _check("select() allowlists support_issue -> create_ticket",
                     tools.select(Decision("action", "support_issue", "high", True)).name
                     == "create_ticket")
+    try:
+        tools.select(Decision("action", "record_update", "low", True))
+        fails += _check("select() rejects unknown intent", False)
+    except tools.ToolSelectionError:
+        fails += _check("select() rejects unknown intent", True)
+    fails += _check(
+        "explicit ticket wording safely resolves a generic intent",
+        tools.select(
+            Decision("action", "record_update", "low", True),
+            request="Please create a support ticket for my login problem.",
+        ).name == "create_ticket",
+    )
 
     inv_state = {
         "request": "Please cancel invoice INV-2231, reach me at user@meridian.co",
@@ -152,7 +165,7 @@ def main() -> int:
     finally:
         tools.invoke, tools.enqueue = orig_invoke, orig_enqueue
 
-    total = 20
+    total = 22
     print(f"\n{total - fails}/{total} checks passed.")
     return 1 if fails else 0
 
