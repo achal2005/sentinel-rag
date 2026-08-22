@@ -8,6 +8,7 @@ from app import answer as answer_module
 from app import critic, db, router, tools
 from app.graph import action_node, escalate_node
 from app.embed import OllamaError
+from app.retrieve import Hit
 from app.router import Decision
 
 
@@ -175,6 +176,26 @@ class InfrastructureBoundTests(unittest.TestCase):
         self.assertEqual(outcome.citations, [])
         self.assertEqual(outcome.hits, [])
         self.assertIn("can't verify an answer", outcome.text)
+
+    def test_generation_model_failure_escalates_instead_of_500(self) -> None:
+        # Retrieval succeeds and clears the confidence gate, but the answer-
+        # generation model is unavailable (e.g. a Gemini 429). This must fail
+        # closed to a human handoff, never bubble a 500 or fabricate an answer.
+        hit = Hit(
+            id=1, doc="api-keys.md", heading="Rotating a key", citation_id="key-06",
+            content="Rotate under Settings -> API Keys.", score=0.9, similarity=0.82,
+            vector_rank=1, fts_rank=1,
+        )
+        with (
+            patch.object(answer_module, "search", return_value=[hit]),
+            patch.object(answer_module, "chat", side_effect=OllamaError("generation model offline")),
+        ):
+            outcome = answer_module.answer("How do I rotate an API key?")
+
+        self.assertTrue(outcome.escalated)
+        self.assertEqual(outcome.reason, "answer_model_unavailable")
+        self.assertEqual(outcome.citations, [])
+        self.assertIn("escalating this to a human", outcome.text)
 
 
 class AnswerCitationContractTests(unittest.TestCase):
