@@ -112,7 +112,7 @@ export function RequestConsole({
 function Spinner() {
   return (
     <span
-      className="size-3.5 animate-spin rounded-full border-2 border-[#0a0c11]/40 border-t-[#0a0c11]"
+      className="size-3.5 animate-spin rounded-full border-2 border-[#0b0b1a]/40 border-t-[#0b0b1a]"
       aria-hidden
     />
   );

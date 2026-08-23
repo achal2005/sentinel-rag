@@ -54,7 +54,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <Link
           href="/console"
-          className="clay-btn mt-8 inline-flex items-center justify-center gap-2 bg-brand px-3 py-2.5 text-sm font-semibold text-[#041417] focus-visible:outline-none"
+          className="clay-btn mt-8 inline-flex items-center justify-center gap-2 bg-brand px-3 py-2.5 text-sm font-semibold text-[#0b0b1a] focus-visible:outline-none"
         >
           <PlusIcon className="size-4" />
           New request

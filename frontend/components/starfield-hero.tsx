@@ -336,8 +336,8 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 export function InteractiveStarfieldHero({
   particleCount = 300,
   interactionRadius = 140,
-  particleColor = "#60a5fa",
-  activeColor = "#ffffff",
+  particleColor = "#818cf8",
+  activeColor = "#e9e9ff",
   speed = 0.5,
   className,
   children,
