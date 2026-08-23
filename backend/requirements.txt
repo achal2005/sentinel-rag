@@ -5,3 +5,13 @@ psycopg[binary]>=3.2
 # so no LLM SDK is required yet. FastAPI / LangGraph arrive in Week 2.
 fastapi
 uvicorn[standard]
+# Week 2: orchestrate router -> answer|action|escalate as a StateGraph.
+langgraph>=1.2
+# Validate tool params (create_ticket) before firing the n8n webhook.
+# Pulled in transitively by fastapi, but the action node imports it directly.
+pydantic>=2
+# Week 3 observability: one rich trace per run to a self-hosted Langfuse.
+# Pin to the v2 SDK to match the self-hosted langfuse:2 server in docker-compose.
+langfuse>=2,<3
+# Golden evaluation suite + CI integration.
+pytest>=8

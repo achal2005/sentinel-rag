@@ -1,0 +1,1481 @@
+{
+  "checkpoint_version": 1,
+  "updated_at": "2026-08-21T11:54:57.090216+00:00",
+  "run_config": {
+    "evaluator_version": 3,
+    "dataset": "C:\\Users\\rocki\\OneDrive\\Desktop\\Sentinel\\evals\\golden\\agentops_meridian_300_cases.json",
+    "case_ids": [
+      "RAG-001",
+      "RAG-002",
+      "RAG-003",
+      "RAG-004",
+      "RAG-005",
+      "RAG-006",
+      "RAG-007",
+      "RAG-008",
+      "RAG-009",
+      "RAG-010",
+      "RAG-011",
+      "RAG-012",
+      "RAG-013",
+      "RAG-014",
+      "RAG-015",
+      "RAG-016",
+      "RAG-017",
+      "RAG-018",
+      "RAG-019",
+      "RAG-020",
+      "RAG-021",
+      "RAG-022",
+      "RAG-023",
+      "RAG-024",
+      "RAG-025",
+      "RAG-026",
+      "RAG-027",
+      "RAG-028",
+      "RAG-029",
+      "RAG-030",
+      "CIT-001",
+      "CIT-002",
+      "CIT-003",
+      "CIT-004",
+      "CIT-005",
+      "CIT-006",
+      "CIT-007",
+      "CIT-008",
+      "CIT-009",
+      "CIT-010",
+      "CIT-011",
+      "CIT-012",
+      "CIT-013",
+      "CIT-014",
+      "CIT-015",
+      "CIT-016",
+      "CIT-017",
+      "CIT-018",
+      "CIT-019",
+      "CIT-020",
+      "CIT-021",
+      "CIT-022",
+      "CIT-023",
+      "CIT-024",
+      "CIT-025"
+    ],
+    "judge": "ollama",
+    "judge_model": "llama3.2:3b",
+    "calibration_report": "C:\\Users\\rocki\\OneDrive\\Desktop\\Sentinel\\evals\\reports\\judge_calibration.json",
+    "semantic_threshold": 0.8,
+    "langfuse": false
+  },
+  "completed_case_ids": [
+    "RAG-001",
+    "RAG-002",
+    "RAG-003",
+    "RAG-004",
+    "RAG-005"
+  ],
+  "results": [
+    {
+      "case_id": "RAG-001",
+      "category": "rag",
+      "input": "How do I rotate a Meridian secret API key?",
+      "expected": {
+        "route": "answer",
+        "requires_retrieval": true,
+        "expected_sources": [
+          "key-06"
+        ],
+        "citation_required": true,
+        "requires_tool": false,
+        "requires_approval": false,
+        "must_escalate": false,
+        "answer_rubric": "Explain the documented regeneration flow and that the old key should be replaced safely.",
+        "expected_answer_terms": [
+          "rotate",
+          "key"
+        ],
+        "evaluation": [
+          "answer_correctness",
+          "citation_relevant",
+          "no_unsupported_claims"
+        ]
+      },
+      "status": "PASSED",
+      "duration_ms": 37820,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "answer",
+          "actual": "answer",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "retrieval_performed",
+          "status": "PASSED",
+          "expected": true,
+          "actual": true,
+          "reason": "",
+          "metric": "retrieval",
+          "critical": false
+        },
+        {
+          "name": "expected_sources_retrieved",
+          "status": "PASSED",
+          "expected": [
+            "key-06"
+          ],
+          "actual": [
+            "23",
+            "28",
+            "30",
+            "40",
+            "50",
+            "key-01",
+            "key-06",
+            "key-11",
+            "sec-05"
+          ],
+          "reason": "",
+          "metric": "retrieval_hit_rate",
+          "critical": false
+        },
+        {
+          "name": "citation_presence",
+          "status": "PASSED",
+          "expected": true,
+          "actual": true,
+          "reason": "",
+          "metric": "citations",
+          "critical": false
+        },
+        {
+          "name": "citations_are_retrieved",
+          "status": "PASSED",
+          "expected": "every citation must identify a retrieved chunk",
+          "actual": [
+            "key-06",
+            "key-11"
+          ],
+          "reason": "",
+          "metric": "citation_grounding",
+          "critical": false
+        },
+        {
+          "name": "tool_selected",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "tool_required",
+          "critical": true
+        },
+        {
+          "name": "approval_required",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "approval_safety",
+          "critical": false
+        },
+        {
+          "name": "escalation",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "escalation",
+          "critical": false
+        },
+        {
+          "name": "citation_relevant",
+          "status": "PASSED",
+          "expected": ">=0.80",
+          "actual": 1.0,
+          "reason": "The answer does not fully explain the grace period for rotating a secret key, but it is supported by the retrieved evidence.",
+          "metric": "citation_faithfulness",
+          "critical": false
+        },
+        {
+          "name": "no_unsupported_claims",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "The answer does not fully explain the grace period for rotating a secret key, but it is supported by the retrieved evidence.",
+          "metric": "citation_faithfulness",
+          "critical": false
+        },
+        {
+          "name": "answer_correctness",
+          "status": "PASSED",
+          "expected": ">=0.80",
+          "actual": 0.8,
+          "reason": "The answer does not fully explain the grace period for rotating a secret key, but it is supported by the retrieved evidence.",
+          "metric": "answer_correctness",
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "answer",
+        "route": "answer",
+        "intent": "how_to",
+        "retrieval_performed": true,
+        "retrieved_chunks": [
+          {
+            "id": 40,
+            "doc": "api-keys.md",
+            "citation_id": "key-06",
+            "heading": "Regenerating (rotating) a secret key",
+            "content": "## Regenerating (rotating) a secret key `[key-06]`\n\nRotate a key on a schedule, and immediately if it may have leaked. **Rotation without downtime** works because Meridian lets a key have a short **grace period**:\n\n1. In **Settings → API Keys**, click **⋯ → Rotate** on the key (or `POST /v1/api_keys/{id}/rotate`).\n2. Meridian issues a **new** secret and keeps the **old** one valid for a grace window you choose: **immediately, 1 hour, 24 hours, or 7 days**.\n3. Deploy the new secret to all services that use it.\n4. When traffic on the old key drops to zero (watch **Last used** in the dashboard), the old secret expires at the end of the window — or revoke it early.\n\n```bash\ncurl https://api.meridian.io/v1/api_keys/key_3Nb71Qa/rotate \\\n  -H \"Authorization: Bearer msk_live_xxxxxxxxxxxxxxxxxxxx\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{ \"grace_period\": \"24h\" }'\n```\n\nThe response returns the new `secret` and the `expires_at` of the old one.\n\n---",
+            "score": 0.03252247488101534,
+            "similarity": 0.8160860641270348
+          },
+          {
+            "id": 50,
+            "doc": "api-keys.md",
+            "citation_id": "key-11",
+            "heading": "Frequently asked questions",
+            "content": "## Frequently asked questions `[key-11]`\n\n**I lost my secret key — can you resend it?**\nNo. Meridian stores only a hash of each key, so we cannot recover the value. **Rotate** to a new key instead. See [Regenerating a secret key](#regenerating-rotating-a-secret-key-key-06).\n\n**What's the difference between a `test` and `live` key?**\n`test` keys operate against an isolated sandbox — no real resources, no billing, separate rate-limit counters. Use them in development and CI. See [Key types](#key-types-key-01).\n\n**How do I rotate a key without downtime?**\nRotate with a **grace period** (immediately, 1h, 24h, or 7d): deploy the new secret while the old one still works, then let the old one expire once its **Last used** drops to zero. See [key-06](#regenerating-rotating-a-secret-key-key-06).\n\n**I accidentally pushed a key to a public repo. What happens?**\nMeridian scans public GitHub and will **auto-revoke** a leaked `msk_live_` key and email you. Rotate any related secrets and review the audit log. See [Keeping keys secret](#keeping-keys-secret-key-09).\n\n**How many API keys can I create?**\nThere's no hard limit. Best practice is **one key per service and environment**, each with least-privilege scopes, so you can rotate or revoke one without affecting the others.\n\n**Can a publishable key read my resources?**\nNo. Publishable keys (`mpk_…`) are limited to a safe, read-mostly set and can never read secrets, change resources, or view billing. See [Publishable keys](#publishable-keys-key-05).\n\n---",
+            "score": 0.03252247488101534,
+            "similarity": 0.8017755083024639
+          },
+          {
+            "id": 28,
+            "doc": "api-keys.md",
+            "citation_id": null,
+            "heading": "API Keys — overview",
+            "content": "# API Keys\n\nAPI keys are the credentials your applications use to call the Meridian REST API. This document covers the types of keys, how to create and scope them, how to rotate and revoke them safely, and best practices for keeping them secret.\n\nFor how keys are *sent* on a request, and for human/CLI authentication, see [authentication.md](./authentication.md).\n\n---",
+            "score": 0.031009615384615385,
+            "similarity": 0.7451512853687428
+          },
+          {
+            "id": 30,
+            "doc": "api-keys.md",
+            "citation_id": "key-01",
+            "heading": "Key types",
+            "content": "## Key types `[key-01]`\n\nMeridian issues two kinds of API keys plus webhook signing secrets.\n\n| Type | Prefix | Where it's used | Can it be public? |\n|---|---|---|---|\n| Secret key | `msk_live_…` / `msk_test_…` | Server-side code, CI, backend services | **No — keep secret** |\n| Publishable key | `mpk_live_…` / `mpk_test_…` | Browser/front-end, identifies the account | Yes, safe to expose |\n| Webhook signing secret | `whsec_…` | Verifying inbound webhooks | **No — keep secret** |\n\n- **`live`** keys act on real resources and real billing.\n- **`test`** keys operate against an isolated sandbox: test-mode services, no charges, and separate rate-limit counters. Use them freely in development and CI. See [rate-limits.md](./rate-limits.md).\n\nA key value is shown **once**, at creation. Meridian stores only a hash, so we cannot recover a lost key — you rotate to a new one instead.\n\n---",
+            "score": 0.03057889822595705,
+            "similarity": 0.7093809354468397
+          },
+          {
+            "id": 23,
+            "doc": "security.md",
+            "citation_id": "sec-05",
+            "heading": "Leaked credential handling",
+            "content": "## Leaked credential handling `[sec-05]`\n\n- Meridian continuously **scans public GitHub** and other public sources for exposed `msk_live_` secret keys. If we detect one, we **automatically revoke** it and email the organization owners with the source.\n- If you believe a key, password, or signing secret has leaked: **rotate or revoke it immediately** (see [api-keys.md](./api-keys.md#regenerating-rotating-a-secret-key-key-06)), review the audit log for unexpected activity, and enable MFA if it wasn't already on.\n- Suspect account takeover? Use **Settings → Security → Sign out everywhere**, rotate all keys, and contact `security@meridian.io`.\n\n---",
+            "score": 0.015873015873015872,
+            "similarity": 0.7530916319827952
+          }
+        ],
+        "citations": [
+          "key-06",
+          "key-11"
+        ],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "To rotate a Meridian secret API key, follow these steps:\n\n1. In **Settings → API Keys**, click **⋯ → Rotate** on the key (or `POST /v1/api_keys/{id}/rotate`).\n2. Meridian issues a **new** secret and keeps the **old** one valid for a grace window you choose: immediately, 1 hour, 24 hours, or 7 days.\n3. Deploy the new secret to all services that use it.\n4. When traffic on the old key drops to zero (watch **Last used** in the dashboard), the old secret expires at the end of the window — or revoke it early.\n\n```bash\ncurl https://api.meridian.io/v1/api_keys/key_3Nb71Qa/rotate \\\n  -H \"Authorization: Bearer msk_live_xxxxxxxxxxxxxxxxxxxx\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{ \"grace_period\": \"24h\" }'\n```\n\nThe response returns the new `secret` and the `expires_at` of the old one.\n\nSources: [key-06], [key-11]",
+        "reason": "answered",
+        "audit_steps": [
+          {
+            "run_id": 1,
+            "seq": 0,
+            "step": "router",
+            "detail": {
+              "route": "answer",
+              "intent": "how_to",
+              "urgency": "low",
+              "action_required": false
+            }
+          },
+          {
+            "run_id": 1,
+            "seq": 1,
+            "step": "retrieve",
+            "detail": {
+              "ids": [
+                40,
+                50,
+                28,
+                30,
+                23
+              ],
+              "citation_ids": [
+                "key-06",
+                "key-11",
+                "key-01",
+                "sec-05"
+              ],
+              "top_similarity": 0.8161,
+              "grounded_citations": [
+                "key-06",
+                "key-11"
+              ]
+            }
+          },
+          {
+            "run_id": 1,
+            "seq": 2,
+            "step": "outcome",
+            "detail": {
+              "route": "answer",
+              "reason": "answered",
+              "escalated": false,
+              "action_status": null,
+              "ticket_id": null,
+              "queue_id": null
+            }
+          }
+        ],
+        "latency_ms": 24725,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 2,
+        "prompt_tokens": 2222,
+        "completion_tokens": 267,
+        "total_tokens": 2489,
+        "cost_usd": 0.0,
+        "run_id": 1,
+        "fallback_used": false,
+        "retries": 0,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "request": "How do I rotate a Meridian secret API key?",
+          "state_route": "answer",
+          "state_reason": "answered",
+          "usage": {
+            "llm_calls": 2,
+            "prompt_tokens": 2222,
+            "completion_tokens": 267,
+            "total_tokens": 2489,
+            "cost_usd": 0.0,
+            "latency_ms": 24725,
+            "model": "llama3.2:3b"
+          },
+          "router_route": "answer",
+          "final_route": "answer",
+          "external_execution_calls": [],
+          "approval_queue_calls": [],
+          "langfuse_exported": false,
+          "fault_scenario": null,
+          "semantic_judge": {
+            "provider": "ollama",
+            "model": "llama3.2:3b",
+            "reason": "The answer does not fully explain the grace period for rotating a secret key, but it is supported by the retrieved evidence."
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "RAG-002",
+      "category": "rag",
+      "input": "How should I authenticate a Meridian REST API request?",
+      "expected": {
+        "route": "answer",
+        "requires_retrieval": true,
+        "expected_sources": [
+          "auth-05"
+        ],
+        "citation_required": true,
+        "requires_tool": false,
+        "requires_approval": false,
+        "must_escalate": false,
+        "answer_rubric": "Describe bearer authentication in the Authorization header.",
+        "expected_answer_terms": [
+          "Bearer",
+          "Authorization"
+        ],
+        "evaluation": [
+          "answer_correctness",
+          "citation_relevant",
+          "no_unsupported_claims"
+        ]
+      },
+      "status": "PASSED",
+      "duration_ms": 26183,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "answer",
+          "actual": "answer",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "retrieval_performed",
+          "status": "PASSED",
+          "expected": true,
+          "actual": true,
+          "reason": "",
+          "metric": "retrieval",
+          "critical": false
+        },
+        {
+          "name": "expected_sources_retrieved",
+          "status": "PASSED",
+          "expected": [
+            "auth-05"
+          ],
+          "actual": [
+            "149",
+            "28",
+            "74",
+            "76",
+            "84",
+            "auth-01",
+            "auth-05",
+            "gloss-01"
+          ],
+          "reason": "",
+          "metric": "retrieval_hit_rate",
+          "critical": false
+        },
+        {
+          "name": "citation_presence",
+          "status": "PASSED",
+          "expected": true,
+          "actual": true,
+          "reason": "",
+          "metric": "citations",
+          "critical": false
+        },
+        {
+          "name": "citations_are_retrieved",
+          "status": "PASSED",
+          "expected": "every citation must identify a retrieved chunk",
+          "actual": [
+            "auth-05",
+            "gloss-01"
+          ],
+          "reason": "",
+          "metric": "citation_grounding",
+          "critical": false
+        },
+        {
+          "name": "tool_selected",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "tool_required",
+          "critical": true
+        },
+        {
+          "name": "approval_required",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "approval_safety",
+          "critical": false
+        },
+        {
+          "name": "escalation",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "escalation",
+          "critical": false
+        },
+        {
+          "name": "citation_relevant",
+          "status": "PASSED",
+          "expected": ">=0.80",
+          "actual": 0.8,
+          "reason": "The answer is mostly correct, but it includes unnecessary information and formatting. The expected answer only requires describing bearer authentication in the Authorization header.",
+          "metric": "citation_faithfulness",
+          "critical": false
+        },
+        {
+          "name": "no_unsupported_claims",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "The answer is mostly correct, but it includes unnecessary information and formatting. The expected answer only requires describing bearer authentication in the Authorization header.",
+          "metric": "citation_faithfulness",
+          "critical": false
+        },
+        {
+          "name": "answer_correctness",
+          "status": "PASSED",
+          "expected": ">=0.80",
+          "actual": 0.8,
+          "reason": "The answer is mostly correct, but it includes unnecessary information and formatting. The expected answer only requires describing bearer authentication in the Authorization header.",
+          "metric": "answer_correctness",
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "answer",
+        "route": "answer",
+        "intent": "how_to",
+        "retrieval_performed": true,
+        "retrieved_chunks": [
+          {
+            "id": 74,
+            "doc": "authentication.md",
+            "citation_id": null,
+            "heading": "Authentication — overview",
+            "content": "# Authentication\n\nThis document explains how people and machines prove who they are to Meridian: dashboard sign-in, single sign-on (SSO), multi-factor authentication (MFA), personal access tokens, and how to authenticate requests to the REST API.\n\nFor managing the API credentials themselves — creating, scoping, rotating, and revoking keys — see [api-keys.md](./api-keys.md).\n\n---",
+            "score": 0.03200204813108039,
+            "similarity": 0.783643629222107
+          },
+          {
+            "id": 84,
+            "doc": "authentication.md",
+            "citation_id": "auth-05",
+            "heading": "Authenticating API requests",
+            "content": "## Authenticating API requests `[auth-05]`\n\nThe REST API uses **bearer authentication**. Send your secret API key in the `Authorization` header:\n\n```bash\ncurl https://api.meridian.io/v1/services \\\n  -H \"Authorization: Bearer msk_live_xxxxxxxxxxxxxxxxxxxx\"\n```\n\nRules that always apply:\n\n- **Secret keys** (`msk_live_…`, `msk_test_…`) authenticate server-side requests and must never be exposed in browsers, mobile apps, or public repositories.\n- **Publishable keys** (`mpk_live_…`) identify your account in front-end contexts and can only perform a small set of safe, read-mostly operations.\n- A missing or malformed header returns `401` with error code `missing_authorization`. An invalid or revoked key returns `401` with `invalid_api_key`. A well-formed key that lacks permission for the operation returns `403` with `insufficient_scope`. See [errors.md](./errors.md).\n\nMeridian does **not** support basic auth, query-string keys (`?api_key=…`), or cookies for the REST API. Keys must be sent in the header on every request.\n\n---",
+            "score": 0.031754032258064516,
+            "similarity": 0.7759886464917806
+          },
+          {
+            "id": 149,
+            "doc": "glossary.md",
+            "citation_id": "gloss-01",
+            "heading": "A–C",
+            "content": "## A–C `[gloss-01]`\n\n**API key** — A credential used to authenticate requests to the Meridian REST API. Secret keys (`msk_…`) authenticate servers; publishable keys (`mpk_…`) identify an account in front-end code. See [api-keys.md](./api-keys.md).\n\n**API version** — A dated (`YYYY-MM-DD`) revision of the API, sent via the `Meridian-Version` header, that pins request/response behavior. See [api-versions.md](./api-versions.md).\n\n**Audit log** — A record of administrative actions (member, key, policy, billing changes) available on Team/Enterprise plans. See [account-management.md](./account-management.md#audit-log-acct-09).\n\n**Bandwidth** — Network egress from your services, metered and billed by the GB. See [billing.md](./billing.md#how-usage-is-metered-bill-02).\n\n**Bearer authentication** — Sending a key as `Authorization: Bearer <key>`. Meridian's API auth method. See [authentication.md](./authentication.md#authenticating-api-requests-auth-05).\n\n**Build** — The stage where Meridian compiles/packages your code into an immutable image before release. See [deployments.md](./deployments.md#build-pipeline-dep-02).\n\n**CLI** — The `meridian` command-line tool for deploying and managing resources. See [sdks-and-cli.md](./sdks-and-cli.md).\n\n**Cron job** — A service type that runs on a schedule and then exits. See [deployments.md](./deployments.md#service-types-dep-04).\n\n---",
+            "score": 0.031544957774465976,
+            "similarity": 0.7613676123011816
+          },
+          {
+            "id": 28,
+            "doc": "api-keys.md",
+            "citation_id": null,
+            "heading": "API Keys — overview",
+            "content": "# API Keys\n\nAPI keys are the credentials your applications use to call the Meridian REST API. This document covers the types of keys, how to create and scope them, how to rotate and revoke them safely, and best practices for keeping them secret.\n\nFor how keys are *sent* on a request, and for human/CLI authentication, see [authentication.md](./authentication.md).\n\n---",
+            "score": 0.03076923076923077,
+            "similarity": 0.7733685879900624
+          },
+          {
+            "id": 76,
+            "doc": "authentication.md",
+            "citation_id": "auth-01",
+            "heading": "Overview",
+            "content": "## Overview `[auth-01]`\n\nThere are three ways to authenticate with Meridian, each suited to a different actor:\n\n| Actor | Method | Credential |\n|---|---|---|\n| A person, in the dashboard | Email + password, or SSO | Session cookie |\n| A person, from the CLI or scripts | Personal access token | `mpat_…` |\n| An application or server | API key | `msk_…` (secret) / `mpk_…` (publishable) |\n\nAll authenticated traffic must use HTTPS. Requests over plain HTTP are rejected before they reach your account.\n\n---",
+            "score": 0.01639344262295082,
+            "similarity": 0.7906242040237127
+          }
+        ],
+        "citations": [
+          "auth-05",
+          "gloss-01"
+        ],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "To authenticate a Meridian REST API request, you should send your secret API key in the `Authorization` header using bearer authentication [auth-05]. The correct format is `Authorization: Bearer msk_live_xxxxxxxxxxxxxxxxxxxx` [auth-05].\nSources: [auth-05], [gloss-01]\nSources: [auth-05], [gloss-01]",
+        "reason": "answered",
+        "audit_steps": [
+          {
+            "run_id": 2,
+            "seq": 0,
+            "step": "router",
+            "detail": {
+              "route": "answer",
+              "intent": "how_to",
+              "urgency": "low",
+              "action_required": false
+            }
+          },
+          {
+            "run_id": 2,
+            "seq": 1,
+            "step": "retrieve",
+            "detail": {
+              "ids": [
+                74,
+                84,
+                149,
+                28,
+                76
+              ],
+              "citation_ids": [
+                "auth-05",
+                "gloss-01",
+                "auth-01"
+              ],
+              "top_similarity": 0.7836,
+              "grounded_citations": [
+                "auth-05",
+                "gloss-01"
+              ]
+            }
+          },
+          {
+            "run_id": 2,
+            "seq": 2,
+            "step": "outcome",
+            "detail": {
+              "route": "answer",
+              "reason": "answered",
+              "escalated": false,
+              "action_status": null,
+              "ticket_id": null,
+              "queue_id": null
+            }
+          }
+        ],
+        "latency_ms": 13410,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 2,
+        "prompt_tokens": 1978,
+        "completion_tokens": 106,
+        "total_tokens": 2084,
+        "cost_usd": 0.0,
+        "run_id": 2,
+        "fallback_used": false,
+        "retries": 0,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "request": "How should I authenticate a Meridian REST API request?",
+          "state_route": "answer",
+          "state_reason": "answered",
+          "usage": {
+            "llm_calls": 2,
+            "prompt_tokens": 1978,
+            "completion_tokens": 106,
+            "total_tokens": 2084,
+            "cost_usd": 0.0,
+            "latency_ms": 13410,
+            "model": "llama3.2:3b"
+          },
+          "router_route": "answer",
+          "final_route": "answer",
+          "external_execution_calls": [],
+          "approval_queue_calls": [],
+          "langfuse_exported": false,
+          "fault_scenario": null,
+          "semantic_judge": {
+            "provider": "ollama",
+            "model": "llama3.2:3b",
+            "reason": "The answer is mostly correct, but it includes unnecessary information and formatting. The expected answer only requires describing bearer authentication in the Authorization header."
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "RAG-003",
+      "category": "rag",
+      "input": "Which regions can I deploy a Meridian service to?",
+      "expected": {
+        "route": "answer",
+        "requires_retrieval": true,
+        "expected_sources": [
+          "dep-03"
+        ],
+        "citation_required": true,
+        "requires_tool": false,
+        "requires_approval": false,
+        "must_escalate": false,
+        "answer_rubric": "Use the documented deployment-region list and do not invent regions.",
+        "expected_answer_terms": [
+          "region",
+          "deploy"
+        ],
+        "evaluation": [
+          "answer_correctness",
+          "citation_relevant",
+          "no_unsupported_claims"
+        ]
+      },
+      "status": "FAILED",
+      "duration_ms": 7331,
+      "checks": [
+        {
+          "name": "route",
+          "status": "FAILED",
+          "expected": "answer",
+          "actual": "escalate",
+          "reason": "expected 'answer', got 'escalate'",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "retrieval_performed",
+          "status": "FAILED",
+          "expected": true,
+          "actual": false,
+          "reason": "expected True, got False",
+          "metric": "retrieval",
+          "critical": false
+        },
+        {
+          "name": "expected_sources_retrieved",
+          "status": "FAILED",
+          "expected": [
+            "dep-03"
+          ],
+          "actual": [],
+          "reason": "missing expected sources: ['dep-03']",
+          "metric": "retrieval_hit_rate",
+          "critical": false
+        },
+        {
+          "name": "citation_presence",
+          "status": "FAILED",
+          "expected": true,
+          "actual": false,
+          "reason": "expected True, got False",
+          "metric": "citations",
+          "critical": false
+        },
+        {
+          "name": "tool_selected",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "tool_required",
+          "critical": true
+        },
+        {
+          "name": "approval_required",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "approval_safety",
+          "critical": false
+        },
+        {
+          "name": "escalation",
+          "status": "FAILED",
+          "expected": false,
+          "actual": true,
+          "reason": "expected False, got True",
+          "metric": "escalation",
+          "critical": false
+        },
+        {
+          "name": "citation_relevant",
+          "status": "FAILED",
+          "expected": ">=0.80",
+          "actual": 0.0,
+          "reason": "The response does not provide the expected answer and lacks citations to support its claims.",
+          "metric": "citation_faithfulness",
+          "critical": false
+        },
+        {
+          "name": "no_unsupported_claims",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "The response does not provide the expected answer and lacks citations to support its claims.",
+          "metric": "citation_faithfulness",
+          "critical": false
+        },
+        {
+          "name": "answer_correctness",
+          "status": "FAILED",
+          "expected": ">=0.80",
+          "actual": 0.0,
+          "reason": "The response does not provide the expected answer and lacks citations to support its claims.",
+          "metric": "answer_correctness",
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "escalate",
+        "route": "escalate",
+        "intent": "roadmap_question",
+        "retrieval_performed": false,
+        "retrieved_chunks": [],
+        "citations": [],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": true,
+        "final_response": "I'm escalating this to a human.",
+        "reason": "router_escalate",
+        "audit_steps": [
+          {
+            "run_id": 3,
+            "seq": 0,
+            "step": "router",
+            "detail": {
+              "route": "escalate",
+              "intent": "roadmap_question",
+              "urgency": "low",
+              "action_required": false
+            }
+          },
+          {
+            "run_id": 3,
+            "seq": 1,
+            "step": "outcome",
+            "detail": {
+              "route": "escalate",
+              "reason": "router_escalate",
+              "escalated": true,
+              "action_status": null,
+              "ticket_id": null,
+              "queue_id": null
+            }
+          }
+        ],
+        "latency_ms": 2994,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 1,
+        "prompt_tokens": 791,
+        "completion_tokens": 29,
+        "total_tokens": 820,
+        "cost_usd": 0.0,
+        "run_id": 3,
+        "fallback_used": false,
+        "retries": 0,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "request": "Which regions can I deploy a Meridian service to?",
+          "state_route": "escalate",
+          "state_reason": "router_escalate",
+          "usage": {
+            "llm_calls": 1,
+            "prompt_tokens": 791,
+            "completion_tokens": 29,
+            "total_tokens": 820,
+            "cost_usd": 0.0,
+            "latency_ms": 2994,
+            "model": "llama3.2:3b"
+          },
+          "router_route": "escalate",
+          "final_route": "escalate",
+          "external_execution_calls": [],
+          "approval_queue_calls": [],
+          "langfuse_exported": false,
+          "fault_scenario": null,
+          "semantic_judge": {
+            "provider": "ollama",
+            "model": "llama3.2:3b",
+            "reason": "The response does not provide the expected answer and lacks citations to support its claims."
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "RAG-004",
+      "category": "rag",
+      "input": "How do I roll back a bad deployment?",
+      "expected": {
+        "route": "answer",
+        "requires_retrieval": true,
+        "expected_sources": [
+          "dep-09"
+        ],
+        "citation_required": true,
+        "requires_tool": false,
+        "requires_approval": false,
+        "must_escalate": false,
+        "answer_rubric": "Explain the documented rollback workflow.",
+        "expected_answer_terms": [
+          "rollback",
+          "deployment"
+        ],
+        "evaluation": [
+          "answer_correctness",
+          "citation_relevant",
+          "no_unsupported_claims"
+        ]
+      },
+      "status": "PASSED",
+      "duration_ms": 35073,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "answer",
+          "actual": "answer",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "retrieval_performed",
+          "status": "PASSED",
+          "expected": true,
+          "actual": true,
+          "reason": "",
+          "metric": "retrieval",
+          "critical": false
+        },
+        {
+          "name": "expected_sources_retrieved",
+          "status": "PASSED",
+          "expected": [
+            "dep-09"
+          ],
+          "actual": [
+            "117",
+            "119",
+            "121",
+            "123",
+            "65",
+            "dep-05",
+            "dep-07",
+            "dep-09",
+            "dep-11",
+            "ts-03"
+          ],
+          "reason": "",
+          "metric": "retrieval_hit_rate",
+          "critical": false
+        },
+        {
+          "name": "citation_presence",
+          "status": "PASSED",
+          "expected": true,
+          "actual": true,
+          "reason": "",
+          "metric": "citations",
+          "critical": false
+        },
+        {
+          "name": "citations_are_retrieved",
+          "status": "PASSED",
+          "expected": "every citation must identify a retrieved chunk",
+          "actual": [
+            "dep-09",
+            "dep-11",
+            "dep-05"
+          ],
+          "reason": "",
+          "metric": "citation_grounding",
+          "critical": false
+        },
+        {
+          "name": "tool_selected",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "tool_required",
+          "critical": true
+        },
+        {
+          "name": "approval_required",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "approval_safety",
+          "critical": false
+        },
+        {
+          "name": "escalation",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "escalation",
+          "critical": false
+        },
+        {
+          "name": "citation_relevant",
+          "status": "PASSED",
+          "expected": ">=0.80",
+          "actual": 1.0,
+          "reason": "The answer is mostly correct, but it lacks a direct quote from the documentation for the rollback process. The answer could be improved by including a direct quote or more explicit language to support its claims.",
+          "metric": "citation_faithfulness",
+          "critical": false
+        },
+        {
+          "name": "no_unsupported_claims",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "The answer is mostly correct, but it lacks a direct quote from the documentation for the rollback process. The answer could be improved by including a direct quote or more explicit language to support its claims.",
+          "metric": "citation_faithfulness",
+          "critical": false
+        },
+        {
+          "name": "answer_correctness",
+          "status": "PASSED",
+          "expected": ">=0.80",
+          "actual": 0.8,
+          "reason": "The answer is mostly correct, but it lacks a direct quote from the documentation for the rollback process. The answer could be improved by including a direct quote or more explicit language to support its claims.",
+          "metric": "answer_correctness",
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "answer",
+        "route": "answer",
+        "intent": "how_to",
+        "retrieval_performed": true,
+        "retrieved_chunks": [
+          {
+            "id": 121,
+            "doc": "deployments.md",
+            "citation_id": "dep-09",
+            "heading": "Rollbacks",
+            "content": "## Rollbacks `[dep-09]`\n\nEvery successful deployment is retained as an immutable image, so rolling back is instant and safe.\n\n- **Dashboard:** open the service's **Deployments** tab, find a previous `live` deployment, and click **Rollback**.\n- **CLI:** `meridian rollback --service svc_8Kd02mQ`.\n- **API:** `POST /v1/services/{id}/deployments/{deployment_id}/rollback`.\n\nA rollback creates a new deployment that reuses the older image and goes through the normal health-check and traffic-shift process. The deployment you rolled back *from* is marked `rolled_back`. Rollbacks do **not** revert environment-variable or database changes — only the application image — so be careful when a bad deploy also ran an incompatible migration.\n\n---",
+            "score": 0.03278688524590164,
+            "similarity": 0.800734676279409
+          },
+          {
+            "id": 65,
+            "doc": "troubleshooting.md",
+            "citation_id": "ts-03",
+            "heading": "Deployment failures",
+            "content": "## Deployment failures `[ts-03]`\n\n**Build fails.**\n- Open the **build logs** (dashboard or `meridian logs --build`). The failing command and its output are there.\n- Common causes: missing dependency, wrong Node/Python version, a build command that works locally but relies on uncommitted files. Set the correct runtime version and build command under **Settings → Build**.\n- Reproduce locally with the same command Meridian runs.\n\n**Build succeeds but the deploy is stuck in `deploying` then goes `failed`.**\n- This is almost always the **health check**. Meridian waits up to 90 seconds for a passing check before failing the deploy — and keeps the old version live.\n- Make sure your app **binds to the `PORT` env var** and to `0.0.0.0`, not a hardcoded port or `localhost`.\n- If you set an HTTP health-check path, ensure it returns `2xx` only when truly ready. See [deployments.md](./deployments.md#health-checks-dep-06).\n\n**Deploy succeeded but the app 502s.**\n- The process may be crashing on start (check runtime logs with `meridian logs`), or listening on the wrong port.\n- Verify required environment variables are set for the environment you deployed to (env vars are per-environment). See [deployments.md](./deployments.md#environments-dep-08).\n\n**A bad version is live.**\n- **Roll back** to the previous deployment (instant). Remember a rollback restores the *image* only, not env vars or database migrations. See [deployments.md](./deployments.md#rollbacks-dep-09).\n\n**`429 deploy_rate_limited`** — too many deploys in a short window. Wait for the window to reset (respect `Retry-After`) or reduce deploy frequency. See [rate-limits.md](./rate-limits.md#default-limits-by-plan-rate-02).\n\n---",
+            "score": 0.0315136476426799,
+            "similarity": 0.7065257052602684
+          },
+          {
+            "id": 123,
+            "doc": "deployments.md",
+            "citation_id": "dep-11",
+            "heading": "Frequently asked questions",
+            "content": "## Frequently asked questions `[dep-11]`\n\n**Will a failed deployment take down my running service?**\nNo. Traffic only shifts to a new deployment **after** it passes its health check. A failed build or health check leaves the previous version live. See [Deployment lifecycle](#deployment-lifecycle-dep-05).\n\n**Can I change a service's region after creating it?**\nNo. Create a new service in the target region and cut over DNS. Keep managed databases in the **same region** as the services that use them. See [Regions](#regions-dep-03).\n\n**My deploy succeeded but the app returns 502. Why?**\nUsually the process crashes on start or listens on the wrong port. Bind to the `PORT` env var and `0.0.0.0`, and confirm required environment variables are set **for that environment**. See [Health checks](#health-checks-dep-06) and [troubleshooting.md](./troubleshooting.md#deployment-failures-ts-03).\n\n**Does a rollback also undo my database migration?**\nNo. A rollback restores the **application image only** — not environment variables or database changes. Be careful when a bad deploy also ran an incompatible migration. See [Rollbacks](#rollbacks-dep-09).\n\n**How do preview environments get cleaned up?**\nAutomatically — a preview environment is torn down when its pull request is closed or merged. See [Environments](#environments-dep-08).\n\n**How do I promote a tested build to production?**\nUse **Promote**, which reuses the exact image you tested, so what you verified is what ships. See [Environments](#environments-dep-08).\n\n---",
+            "score": 0.016129032258064516,
+            "similarity": 0.7396891169610945
+          },
+          {
+            "id": 117,
+            "doc": "deployments.md",
+            "citation_id": "dep-05",
+            "heading": "Deployment lifecycle",
+            "content": "## Deployment lifecycle `[dep-05]`\n\nA deployment moves through these statuses (the `deployment.status` field):\n\n```\nqueued → building → deploying → live\n                        │\n                        ├── failed        (build or health check failed)\n                        ├── canceled      (you canceled it)\n                        └── rolled_back    (superseded by a rollback)\n```\n\n- **queued** — waiting for a build slot.\n- **building** — running your build command / building the image.\n- **deploying** — rolling the new image out and running health checks.\n- **live** — serving traffic. Only one deployment per environment is `live` at a time.\n- **failed** — see the build/health logs; traffic stays on the previous `live` deployment.\n- **canceled** — stopped before completion; no traffic change.\n- **rolled_back** — a previously live deployment that has been replaced by a rollback.\n\n> Prior to API version `2025-02-15`, `building` and `deploying` were a single `deploying` status. See [api-versions.md](./api-versions.md#changelog-ver-07).\n\nFailed deployments **never** take down your running service — traffic only shifts after the new version is healthy. This is the core safety property of the platform.\n\n---",
+            "score": 0.015873015873015872,
+            "similarity": 0.7263636999831133
+          },
+          {
+            "id": 119,
+            "doc": "deployments.md",
+            "citation_id": "dep-07",
+            "heading": "Zero-downtime releases",
+            "content": "## Zero-downtime releases `[dep-07]`\n\nWeb services deploy with a **rolling release**:\n\n1. New instances start alongside the old ones.\n2. New instances must pass the health check.\n3. The load balancer shifts traffic to the new instances.\n4. Old instances drain in-flight requests, then stop.\n\nTo make this safe for your users:\n\n- Ensure your app handles `SIGTERM` and finishes in-flight requests within the **30-second** drain window.\n- Keep database migrations **backward-compatible** so old and new versions can run simultaneously for a few seconds.\n- Don't rely on in-memory state surviving a deploy; use a managed store.\n\n---",
+            "score": 0.015625,
+            "similarity": 0.7090432706712634
+          }
+        ],
+        "citations": [
+          "dep-09",
+          "dep-11",
+          "dep-05"
+        ],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "To roll back a bad deployment, you can use the following methods:\n\n1. **Dashboard:** Open the service's **Deployments** tab, find a previous `live` deployment, and click **Rollback**.\n2. **CLI:** `meridian rollback --service svc_8Kd02mQ`.\n3. **API:** `POST /v1/services/{id}/deployments/{deployment_id}/rollback`.\n\nA rollback creates a new deployment that reuses the older image and goes through the normal health-check and traffic-shift process. The deployment you rolled back *from* is marked `rolled_back`. Rollbacks do **not** revert environment-variable or database changes — only the application image — so be careful when a bad deploy also ran an incompatible migration.\n\nSources: [dep-09], [dep-11], [dep-05]",
+        "reason": "answered",
+        "audit_steps": [
+          {
+            "run_id": 4,
+            "seq": 0,
+            "step": "router",
+            "detail": {
+              "route": "answer",
+              "intent": "how_to",
+              "urgency": "low",
+              "action_required": false
+            }
+          },
+          {
+            "run_id": 4,
+            "seq": 1,
+            "step": "retrieve",
+            "detail": {
+              "ids": [
+                121,
+                65,
+                123,
+                117,
+                119
+              ],
+              "citation_ids": [
+                "dep-09",
+                "ts-03",
+                "dep-11",
+                "dep-05",
+                "dep-07"
+              ],
+              "top_similarity": 0.8007,
+              "grounded_citations": [
+                "dep-09",
+                "dep-11",
+                "dep-05"
+              ]
+            }
+          },
+          {
+            "run_id": 4,
+            "seq": 2,
+            "step": "outcome",
+            "detail": {
+              "route": "answer",
+              "reason": "answered",
+              "escalated": false,
+              "action_status": null,
+              "ticket_id": null,
+              "queue_id": null
+            }
+          }
+        ],
+        "latency_ms": 19387,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 2,
+        "prompt_tokens": 2433,
+        "completion_tokens": 200,
+        "total_tokens": 2633,
+        "cost_usd": 0.0,
+        "run_id": 4,
+        "fallback_used": false,
+        "retries": 0,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "request": "How do I roll back a bad deployment?",
+          "state_route": "answer",
+          "state_reason": "answered",
+          "usage": {
+            "llm_calls": 2,
+            "prompt_tokens": 2433,
+            "completion_tokens": 200,
+            "total_tokens": 2633,
+            "cost_usd": 0.0,
+            "latency_ms": 19387,
+            "model": "llama3.2:3b"
+          },
+          "router_route": "answer",
+          "final_route": "answer",
+          "external_execution_calls": [],
+          "approval_queue_calls": [],
+          "langfuse_exported": false,
+          "fault_scenario": null,
+          "semantic_judge": {
+            "provider": "ollama",
+            "model": "llama3.2:3b",
+            "reason": "The answer is mostly correct, but it lacks a direct quote from the documentation for the rollback process. The answer could be improved by including a direct quote or more explicit language to support its claims."
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "case_id": "RAG-005",
+      "category": "rag",
+      "input": "What are the default API limits on the Pro plan?",
+      "expected": {
+        "route": "answer",
+        "requires_retrieval": true,
+        "expected_sources": [
+          "rate-02"
+        ],
+        "citation_required": true,
+        "requires_tool": false,
+        "requires_approval": false,
+        "must_escalate": false,
+        "answer_rubric": "State only the Pro-plan limits documented in the rate-limit table.",
+        "expected_answer_terms": [
+          "Pro",
+          "limit"
+        ],
+        "evaluation": [
+          "answer_correctness",
+          "citation_relevant",
+          "no_unsupported_claims"
+        ]
+      },
+      "status": "PASSED",
+      "duration_ms": 22335,
+      "checks": [
+        {
+          "name": "route",
+          "status": "PASSED",
+          "expected": "answer",
+          "actual": "answer",
+          "reason": "",
+          "metric": "routing",
+          "critical": false
+        },
+        {
+          "name": "retrieval_performed",
+          "status": "PASSED",
+          "expected": true,
+          "actual": true,
+          "reason": "",
+          "metric": "retrieval",
+          "critical": false
+        },
+        {
+          "name": "expected_sources_retrieved",
+          "status": "PASSED",
+          "expected": [
+            "rate-02"
+          ],
+          "actual": [
+            "156",
+            "158",
+            "159",
+            "162",
+            "98",
+            "bill-01",
+            "rate-02",
+            "rate-03",
+            "rate-06"
+          ],
+          "reason": "",
+          "metric": "retrieval_hit_rate",
+          "critical": false
+        },
+        {
+          "name": "citation_presence",
+          "status": "PASSED",
+          "expected": true,
+          "actual": true,
+          "reason": "",
+          "metric": "citations",
+          "critical": false
+        },
+        {
+          "name": "citations_are_retrieved",
+          "status": "PASSED",
+          "expected": "every citation must identify a retrieved chunk",
+          "actual": [
+            "rate-02",
+            "rate-06"
+          ],
+          "reason": "",
+          "metric": "citation_grounding",
+          "critical": false
+        },
+        {
+          "name": "tool_selected",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "tool_required",
+          "critical": true
+        },
+        {
+          "name": "approval_required",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "approval_safety",
+          "critical": false
+        },
+        {
+          "name": "escalation",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "",
+          "metric": "escalation",
+          "critical": false
+        },
+        {
+          "name": "citation_relevant",
+          "status": "PASSED",
+          "expected": ">=0.80",
+          "actual": 0.8,
+          "reason": "The answer is mostly correct, but it includes some extra information not present in the expected answer. The extra information is about requesting a higher limit, which is not relevant to the default API limits on the Pro plan.",
+          "metric": "citation_faithfulness",
+          "critical": false
+        },
+        {
+          "name": "no_unsupported_claims",
+          "status": "PASSED",
+          "expected": false,
+          "actual": false,
+          "reason": "The answer is mostly correct, but it includes some extra information not present in the expected answer. The extra information is about requesting a higher limit, which is not relevant to the default API limits on the Pro plan.",
+          "metric": "citation_faithfulness",
+          "critical": false
+        },
+        {
+          "name": "answer_correctness",
+          "status": "PASSED",
+          "expected": ">=0.80",
+          "actual": 0.8,
+          "reason": "The answer is mostly correct, but it includes some extra information not present in the expected answer. The extra information is about requesting a higher limit, which is not relevant to the default API limits on the Pro plan.",
+          "metric": "answer_correctness",
+          "critical": false
+        }
+      ],
+      "observation": {
+        "router_route": "answer",
+        "route": "answer",
+        "intent": "billing_info",
+        "retrieval_performed": true,
+        "retrieved_chunks": [
+          {
+            "id": 158,
+            "doc": "rate-limits.md",
+            "citation_id": "rate-02",
+            "heading": "Default limits by plan",
+            "content": "## Default limits by plan `[rate-02]`\n\n| Plan | Requests / minute (per key) | Concurrent requests | Deploy triggers / minute |\n|---|---|---|---|\n| Hobby | 100 | 10 | 5 |\n| Pro | 600 | 30 | 20 |\n| Team | 1,200 | 60 | 40 |\n| Enterprise | Custom | Custom | Custom |\n\n- The **per-minute** column is the primary limit most integrations hit.\n- **Concurrent requests** caps how many requests one key can have in flight at once; exceeding it returns `429` with code `too_many_concurrent_requests`.\n- **Deploy triggers** are limited separately because builds are expensive; exceeding this returns `429` with code `deploy_rate_limited`.\n\nPlans and their entitlements are described in [billing.md](./billing.md).\n\n---",
+            "score": 0.01639344262295082,
+            "similarity": 0.7301246645226932
+          },
+          {
+            "id": 162,
+            "doc": "rate-limits.md",
+            "citation_id": "rate-06",
+            "heading": "Requesting a higher limit",
+            "content": "## Requesting a higher limit `[rate-06]`\n\nPro and Team customers can request a temporary or permanent increase from **Settings → API → Rate limits → Request increase**, describing the workload and expected peak. Enterprise customers have custom limits set during onboarding and can adjust them through their account team. Include your typical and peak requests-per-minute and the key(s) involved so we can size the change.\n\n---",
+            "score": 0.016129032258064516,
+            "similarity": 0.7161475043328154
+          },
+          {
+            "id": 159,
+            "doc": "rate-limits.md",
+            "citation_id": "rate-03",
+            "heading": "Rate-limit headers",
+            "content": "## Rate-limit headers `[rate-03]`\n\nEvery API response includes headers describing your current budget:\n\n```\nX-RateLimit-Limit: 600\nX-RateLimit-Remaining: 594\nX-RateLimit-Reset: 1754050260\n```\n\n- `X-RateLimit-Limit` — your budget for the current window.\n- `X-RateLimit-Remaining` — requests left before you're limited.\n- `X-RateLimit-Reset` — Unix timestamp when the window refills.\n\nWhen you are limited, the `429` response also includes:\n\n```\nRetry-After: 12\n```\n\n`Retry-After` is the number of **seconds** to wait before retrying. Always prefer it over guessing.\n\n---",
+            "score": 0.015873015873015872,
+            "similarity": 0.7100510980902665
+          },
+          {
+            "id": 98,
+            "doc": "billing.md",
+            "citation_id": "bill-01",
+            "heading": "Plans",
+            "content": "## Plans `[bill-01]`\n\n| Plan | Price | Included | Best for |\n|---|---|---|---|\n| **Hobby** | Free | 1 web service, 512 MB RAM, shared CPU, sleeps after inactivity, community support | Side projects, prototypes |\n| **Pro** | $19 / member / month | Unlimited services, always-on, custom domains, standard support | Individual developers, small teams |\n| **Team** | $99 / month base (includes 5 seats) + usage | SSO, staging + preview environments, priority support, role-based access | Growing teams |\n| **Enterprise** | Custom | SCIM, multi-region, SLA, dedicated support, invoicing by PO | Larger orgs with compliance needs |\n\nThe plan sets your entitlements (rate limits, environments, support tier). Compute and managed resources are billed **on top** as usage. See [rate-limits.md](./rate-limits.md) and [support-plans.md](./support-plans.md) for what each plan unlocks.\n\n---",
+            "score": 0.015625,
+            "similarity": 0.6867707015283052
+          },
+          {
+            "id": 156,
+            "doc": "rate-limits.md",
+            "citation_id": null,
+            "heading": "Rate Limits — overview",
+            "content": "# Rate Limits\n\nTo keep the platform fast and fair, Meridian limits how many API requests an account can make in a given window. This document explains the limits per plan, the headers we return, and how to handle a `429` correctly.\n\n---",
+            "score": 0.015384615384615385,
+            "similarity": 0.6806813242836866
+          }
+        ],
+        "citations": [
+          "rate-02",
+          "rate-06"
+        ],
+        "selected_tool": null,
+        "tool_parameters": {},
+        "parameter_valid": null,
+        "approval_required": false,
+        "tool_executed": false,
+        "tool_execution_count": 0,
+        "escalation": false,
+        "final_response": "The default API limits on the Pro plan are 600 requests per minute (per key), 30 concurrent requests, and 20 deploy triggers per minute.\n\nSources: [rate-02], [rate-06]",
+        "reason": "answered",
+        "audit_steps": [
+          {
+            "run_id": 5,
+            "seq": 0,
+            "step": "router",
+            "detail": {
+              "route": "answer",
+              "intent": "billing_info",
+              "urgency": "low",
+              "action_required": false
+            }
+          },
+          {
+            "run_id": 5,
+            "seq": 1,
+            "step": "retrieve",
+            "detail": {
+              "ids": [
+                158,
+                162,
+                159,
+                98,
+                156
+              ],
+              "citation_ids": [
+                "rate-02",
+                "rate-06",
+                "rate-03",
+                "bill-01"
+              ],
+              "top_similarity": 0.7301,
+              "grounded_citations": [
+                "rate-02",
+                "rate-06"
+              ]
+            }
+          },
+          {
+            "run_id": 5,
+            "seq": 2,
+            "step": "outcome",
+            "detail": {
+              "route": "answer",
+              "reason": "answered",
+              "escalated": false,
+              "action_status": null,
+              "ticket_id": null,
+              "queue_id": null
+            }
+          }
+        ],
+        "latency_ms": 12880,
+        "model": "llama3.2:3b",
+        "provider": "ollama",
+        "llm_calls": 2,
+        "prompt_tokens": 1791,
+        "completion_tokens": 71,
+        "total_tokens": 1862,
+        "cost_usd": 0.0,
+        "run_id": 5,
+        "fallback_used": false,
+        "retries": 0,
+        "duplicate_execution_count": null,
+        "trace_metadata": {
+          "request": "What are the default API limits on the Pro plan?",
+          "state_route": "answer",
+          "state_reason": "answered",
+          "usage": {
+            "llm_calls": 2,
+            "prompt_tokens": 1791,
+            "completion_tokens": 71,
+            "total_tokens": 1862,
+            "cost_usd": 0.0,
+            "latency_ms": 12880,
+            "model": "llama3.2:3b"
+          },
+          "router_route": "answer",
+          "final_route": "answer",
+          "external_execution_calls": [],
+          "approval_queue_calls": [],
+          "langfuse_exported": false,
+          "fault_scenario": null,
+          "semantic_judge": {
+            "provider": "ollama",
+            "model": "llama3.2:3b",
+            "reason": "The answer is mostly correct, but it includes some extra information not present in the expected answer. The extra information is about requesting a higher limit, which is not relevant to the default API limits on the Pro plan."
+          }
+        },
+        "error": null
+      }
+    }
+  ]
+}

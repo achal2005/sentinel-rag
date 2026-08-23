@@ -1,0 +1,128 @@
+# Self-contained production stack for Sentinel.
+#
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+# Only the frontend (:3000) is published; the API, database, and model server
+# stay on the internal network. The console + API are behind HTTP Basic auth
+# (BASIC_AUTH_USER/PASS) and high-risk tools are simulated (TOOLS_SIMULATE=1), so
+# a public demo cannot cause real side effects. See DEPLOY.md.
+#
+# Override any value via a repo-root .env file (git-ignored). At minimum, change
+# BASIC_AUTH_PASS before exposing this to the internet.
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sentinel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentinel}
+      POSTGRES_DB: ${POSTGRES_DB:-sentinel}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sentinel} -d ${POSTGRES_DB:-sentinel}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  # Local model server: embeddings (nomic-embed-text) + chat (llama3.2:3b).
+  # Keeps the deploy free and self-contained (no external API key required).
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollamadata:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # One-shot: pull the models the pipeline needs, then exit.
+  ollama-init:
+    image: ollama/ollama:latest
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["ollama pull nomic-embed-text && ollama pull llama3.2:3b"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+
+  # One-shot: create the schema and ingest docs/ into pgvector, then exit.
+  ingest:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: sentinel-backend:local
+    command: ["sh", "-c", "python -m app.cli init && python -m app.cli ingest --reset"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sentinel}:${POSTGRES_PASSWORD:-sentinel}@db:5432/${POSTGRES_DB:-sentinel}
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      EMBED_PROVIDER: ${EMBED_PROVIDER:-ollama}
+      OLLAMA_HOST: http://ollama:11434
+      TRACE_ENABLED: "0"
+      LANGFUSE_ENABLED: "0"
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
+    restart: "no"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: sentinel-backend:local
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sentinel}:${POSTGRES_PASSWORD:-sentinel}@db:5432/${POSTGRES_DB:-sentinel}
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      EMBED_PROVIDER: ${EMBED_PROVIDER:-ollama}
+      OLLAMA_HOST: http://ollama:11434
+      CHAT_MODEL: ${CHAT_MODEL:-llama3.2:3b}
+      EMBED_MODEL: ${EMBED_MODEL:-nomic-embed-text}
+      # Demo safety: gate the API and simulate high-risk tool execution.
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:-admin}
+      BASIC_AUTH_PASS: ${BASIC_AUTH_PASS:-please-change-me}
+      TOOLS_SIMULATE: ${TOOLS_SIMULATE:-1}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-http://localhost:3000}
+      TRACE_ENABLED: ${TRACE_ENABLED:-1}
+      LANGFUSE_ENABLED: "0"
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+      ingest:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: sentinel-frontend:local
+    restart: unless-stopped
+    environment:
+      # Server-to-server; the browser never sees this URL.
+      SENTINEL_API_URL: http://backend:8000
+      # Same credentials the browser is challenged for AND the proxy sends upstream.
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:-admin}
+      BASIC_AUTH_PASS: ${BASIC_AUTH_PASS:-please-change-me}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  ollamadata:

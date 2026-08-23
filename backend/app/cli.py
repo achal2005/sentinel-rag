@@ -4,11 +4,16 @@
     python -m app.cli ingest [--reset]    # load docs/ into pgvector
     python -m app.cli search "question"   # show hybrid retrieval hits
     python -m app.cli ask "question"      # full cited answer (or escalation)
+    python -m app.cli graph "request"     # router -> answer|action|escalate
+    python -m app.cli runs [--limit N]    # recent cost/trace log rows
+    python -m app.cli approvals [--limit N]  # high-risk actions awaiting approval
+    python -m app.cli audit [--run N] [--limit N]  # per-step audit trail
 """
 from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from . import db
 from .answer import answer
@@ -23,7 +28,7 @@ def cmd_init(_args) -> None:
 
 
 def cmd_ingest(args) -> None:
-    ingest(reset=args.reset)
+    ingest(reset=args.reset, docs_dir=args.docs_dir)
 
 
 def cmd_search(args) -> None:
@@ -62,6 +67,79 @@ def cmd_ask(args) -> None:
         print(f"  - [{h.citation_id or '(no-id)'}] {h.doc} — {h.heading} (sim={h.similarity:.3f})")
 
 
+def cmd_graph(args) -> None:
+    from .graph import run  # lazy import so other commands don't need langgraph
+
+    s = run(args.query)
+    d = s.get("decision")
+    print(f"Request: {args.query}\n")
+    if d:
+        print(f"[router] route={d.route}  urgency={d.urgency}  intent={d.intent}")
+    print(f"[branch] {s.get('route')} -> reason={s.get('reason')}  "
+          f"escalated={s.get('escalated', False)}\n")
+    print(s.get("answer", "(no answer)"))
+    if s.get("action"):
+        print(f"\nPlanned action: {s['action']}")
+    hits = s.get("hits") or []
+    if hits:
+        print("\nRetrieved:")
+        for h in hits:
+            print(f"  - [{h.citation_id or '(no-id)'}] {h.doc} — {h.heading} "
+                  f"(sim={h.similarity:.3f})")
+    u = s.get("usage") or {}
+    if u:
+        print(f"\n[cost] calls={u.get('llm_calls', 0)}  "
+              f"tokens={u.get('total_tokens', 0)} "
+              f"(in={u.get('prompt_tokens', 0)} out={u.get('completion_tokens', 0)})  "
+              f"${u.get('cost_usd', 0):.6f}  {u.get('latency_ms', 0)}ms"
+              + (f"  run_id={s['run_id']}" if s.get("run_id") else ""))
+
+
+def cmd_runs(args) -> None:
+    from . import trace
+
+    rows = trace.recent(args.limit)
+    if not rows:
+        print("No runs logged yet.")
+        return
+    print(f"{'id':>4}  {'route':<8} {'tokens':>7} {'cost$':>9} {'ms':>6}  reason")
+    for r in rows:
+        print(f"{r['id']:>4}  {str(r['route'] or '-'):<8} "
+              f"{r['total_tokens']:>7} {float(r['cost_usd']):>9.6f} "
+              f"{r['latency_ms'] or 0:>6}  {r['reason'] or ''}"
+              + ("  [escalated]" if r['escalated'] else "")
+              + (f"  ticket#{r['ticket_id']}" if r['ticket_id'] else ""))
+
+
+def cmd_approvals(args) -> None:
+    from . import tools
+
+    rows = tools.list_approvals(status="pending", limit=args.limit)
+    if not rows:
+        print("Approval queue is empty.")
+        return
+    print(f"{'id':>4}  {'tool':<15} {'risk':<6} {'status':<10} reason")
+    for r in rows:
+        print(f"{r['id']:>4}  {r['tool']:<15} {r['risk_level']:<6} "
+              f"{r['status']:<10} {r['reason'] or ''}   params={r['params']}")
+
+
+def cmd_audit(args) -> None:
+    from . import audit
+
+    rows = audit.for_run(args.run) if args.run else audit.recent(args.limit)
+    if not rows:
+        print("No audit steps logged yet." if not args.run
+              else f"No audit steps for run #{args.run}.")
+        return
+    header = f"audit trail for run #{args.run}" if args.run else "recent audit steps"
+    print(header)
+    for r in rows:
+        run_tag = f"run#{r['run_id']}" if r.get("run_id") else (
+            f"appr#{r['approval_id']}" if r.get("approval_id") else "-")
+        print(f"  {run_tag:>8} [{r.get('seq', 0):>2}] {r['step']:<9} {r['detail']}")
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="app.cli", description="Sentinel RAG core CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -70,6 +148,12 @@ def main(argv=None) -> int:
 
     p_ing = sub.add_parser("ingest", help="load docs/ into pgvector")
     p_ing.add_argument("--reset", action="store_true", help="truncate first")
+    p_ing.add_argument(
+        "--docs-dir",
+        type=Path,
+        default=None,
+        help="load Markdown files from this directory instead of docs/",
+    )
     p_ing.set_defaults(func=cmd_ingest)
 
     p_search = sub.add_parser("search", help="show retrieval hits")
@@ -83,6 +167,23 @@ def main(argv=None) -> int:
     p_ask = sub.add_parser("ask", help="cited answer or escalation")
     p_ask.add_argument("query")
     p_ask.set_defaults(func=cmd_ask)
+
+    p_graph = sub.add_parser("graph", help="router -> answer|action|escalate")
+    p_graph.add_argument("query")
+    p_graph.set_defaults(func=cmd_graph)
+
+    p_runs = sub.add_parser("runs", help="recent cost/trace log rows")
+    p_runs.add_argument("--limit", type=int, default=20, help="how many rows")
+    p_runs.set_defaults(func=cmd_runs)
+
+    p_appr = sub.add_parser("approvals", help="high-risk actions awaiting approval")
+    p_appr.add_argument("--limit", type=int, default=20, help="how many rows")
+    p_appr.set_defaults(func=cmd_approvals)
+
+    p_audit = sub.add_parser("audit", help="per-step audit trail")
+    p_audit.add_argument("--run", type=int, help="show steps for one run id")
+    p_audit.add_argument("--limit", type=int, default=20, help="how many rows")
+    p_audit.set_defaults(func=cmd_audit)
 
     args = ap.parse_args(argv)
     args.func(args)

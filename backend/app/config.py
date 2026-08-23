@@ -30,6 +30,13 @@ def _env(key: str, default: str) -> str:
     return os.environ.get(key, default)
 
 
+# --- Tenant / knowledge-base identity ---
+# Keep Meridian as the product default while allowing an isolated public-docs
+# evaluation to reuse the same retrieval and answer pipeline without leaking
+# the fictional product name into the result.
+PRODUCT_NAME = _env("SUPPORT_PRODUCT_NAME", "Meridian")
+
+
 # --- Postgres ---
 DATABASE_URL = os.environ.get("DATABASE_URL") or (
     f"postgresql://{_env('POSTGRES_USER', 'sentinel')}:"
@@ -38,9 +45,17 @@ DATABASE_URL = os.environ.get("DATABASE_URL") or (
     f"{_env('POSTGRES_PORT', '5432')}/"
     f"{_env('POSTGRES_DB', 'sentinel')}"
 )
+DB_CONNECT_TIMEOUT = int(_env("DB_CONNECT_TIMEOUT", "5"))
 
-# --- Ollama ---
+# --- Model providers ---
+LLM_PROVIDER = _env("LLM_PROVIDER", "ollama").strip().lower()
+EMBED_PROVIDER = _env("EMBED_PROVIDER", "ollama").strip().lower()
 OLLAMA_HOST = _env("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
+GEMINI_API_KEY = _env("GEMINI_API_KEY", "")
+GEMINI_API_BASE = _env(
+    "GEMINI_API_BASE", "https://generativelanguage.googleapis.com/v1beta"
+).rstrip("/")
+GEMINI_TIMEOUT = int(_env("GEMINI_TIMEOUT", "90"))
 EMBED_MODEL = _env("EMBED_MODEL", "nomic-embed-text")
 CHAT_MODEL = _env("CHAT_MODEL", "llama3.2:3b")
 EMBED_DIM = int(_env("EMBED_DIM", "768"))
@@ -51,3 +66,49 @@ RETRIEVAL_TOPK = int(_env("RETRIEVAL_TOPK", "5"))
 RRF_K = int(_env("RRF_K", "60"))
 # Minimum cosine similarity (0..1) of the top hit; below this -> escalate.
 CONFIDENCE_MIN = float(_env("CONFIDENCE_MIN", "0.55"))
+
+# --- Cost / trace logging ---
+# Every graph run logs its token usage + latency to the `runs` table. Local
+# Ollama is free, so cost defaults to $0; set these (USD per 1M tokens) to price
+# the SAME token counts against a hypothetical hosted model for the cost table.
+COST_PER_1M_INPUT = float(_env("COST_PER_1M_INPUT", "0.0"))
+COST_PER_1M_OUTPUT = float(_env("COST_PER_1M_OUTPUT", "0.0"))
+TRACE_ENABLED = _env("TRACE_ENABLED", "1").lower() not in {"0", "false", "no", ""}
+
+# --- Langfuse tracing (self-hosted, optional) ---
+# One rich trace per graph run (router -> chunks -> prompt -> tool -> cost),
+# sent to a self-hosted Langfuse. Disabled automatically if keys are unset or
+# the SDK/server is unavailable -- tracing never blocks the request path.
+LANGFUSE_HOST = _env("LANGFUSE_HOST", "http://localhost:3001").rstrip("/")
+LANGFUSE_PUBLIC_KEY = _env("LANGFUSE_PUBLIC_KEY", "")
+LANGFUSE_SECRET_KEY = _env("LANGFUSE_SECRET_KEY", "")
+LANGFUSE_ENABLED = (
+    _env("LANGFUSE_ENABLED", "1").lower() not in {"0", "false", "no", ""}
+    and bool(LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY)
+)
+
+# --- Deployment safety ---
+# Browser origins allowed to call the API directly (CORS). Comma-separated; in a
+# hosted deploy set CORS_ALLOW_ORIGINS to the console's public origin. The Next.js
+# proxy is server-to-server and unaffected by CORS.
+CORS_ORIGINS = [
+    o.strip()
+    for o in _env(
+        "CORS_ALLOW_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+    ).split(",")
+    if o.strip()
+]
+
+
+# HTTP Basic auth on the API. Unset creds => auth disabled (local dev). When both
+# are set, every endpoint except health/docs requires the credentials; the Next.js
+# proxy sends the same pair so the console keeps working end to end.
+BASIC_AUTH_USER = _env("BASIC_AUTH_USER", "")
+BASIC_AUTH_PASS = _env("BASIC_AUTH_PASS", "")
+AUTH_ENABLED = bool(BASIC_AUTH_USER and BASIC_AUTH_PASS)
+
+# Simulate tool execution instead of calling real n8n webhooks. Intended for a
+# public demo: approvals still record and return success, but no real side effect
+# (invoice cancellation, ticket row) is produced. Off by default so local/prod
+# with a real n8n behaves normally.
+TOOLS_SIMULATE = _env("TOOLS_SIMULATE", "0").lower() not in {"0", "false", "no", ""}
