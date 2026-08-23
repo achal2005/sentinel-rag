@@ -1,8 +1,8 @@
 <h1 align="center">Sentinel</h1>
 
 <p align="center">
-  <strong>An evidence-first AI support operator: cited answers, controlled actions, and human approval for risk.</strong><br />
-  <em>LLM brain. n8n hands. A complete audit trail.</em>
+  <strong>An evidence-first AI support operator.</strong><br />
+  It answers only when it can cite the source, acts only through tools it's allowed to use, and asks a human before anything risky.
 </p>
 
 <p align="center">
@@ -15,53 +15,62 @@
   <img src="https://img.shields.io/badge/evals-245%2F245-38D6A3" alt="245 of 245 deterministic evals passing" />
 </p>
 
-Sentinel receives a support request, decides whether to answer, act, escalate, or reject spam, and exposes the evidence behind that decision. Answers are grounded in retrieved documentation. Low-risk actions run through n8n. High-risk actions wait in an approval queue. Every route, citation, tool decision, token, cost, and approval is inspectable in the operator console.
+---
 
-> The central contract is simple: **prove the answer with citations, or hand it to a human.**
+Most "AI support" bots answer with total confidence whether or not they actually know the answer — and they'll happily take actions no one signed off on. Sentinel is built around the opposite instinct.
 
-## Live console walkthrough
+When a request comes in, Sentinel decides what to do with it: **answer** it from the docs, take an **action** on the user's behalf, **escalate** it to a person, or drop it as **spam**. Whatever it chooses, it shows its work. Answers come with the exact passages they're based on. Actions only run if they're on an allow-list and their parameters check out. Anything high-risk waits in a queue for a human to approve. And every step — the route it picked, the chunks it cited, the tokens it burned, the approval someone granted — is written down and inspectable in the console.
 
-The capture below was recorded against the local stack. It submits a real documentation question, returns a grounded answer, opens its persisted trace, and finishes on the generated evaluation report.
+> The whole thing rests on one promise: **prove the answer with a citation, or hand it to a human.** No confident guessing.
+
+## See it in action
+
+Recorded against the local stack — it asks a real documentation question, gets a grounded answer, opens the persisted trace behind that answer, and lands on the generated evaluation report.
 
 ![Sentinel resolving a grounded support request](./assets/demo/sentinel-demo.gif)
 
-## What is working
+## What it does
 
-- **Evidence-backed answers:** hybrid vector and full-text retrieval, Reciprocal Rank Fusion, a confidence gate, and stable citation IDs.
-- **Agentic routing:** a LangGraph pipeline routes requests to `answer`, `action`, `escalate`, or `spam`.
-- **Controlled tools:** an allowlisted registry selects and validates n8n tools. Repeated low-risk requests are idempotent.
-- **Human approval:** financial and other high-risk actions are queued; approval triggers the tool, while rejection closes the request safely.
-- **Operational visibility:** Postgres-backed run history, per-step audit events, token/cost accounting, and optional self-hosted Langfuse traces.
-- **Live operator console:** inbox, request trace, approval queue, cost and usage, evaluation results, and a request console.
-- **Release evidence:** deterministic evaluation gates run on every pull request; a calibrated LLM judge separately scores answer correctness and citation faithfulness.
+- **Answers you can trust** — hybrid vector + full-text retrieval over pgvector, fused with Reciprocal Rank Fusion, gated on a confidence threshold. Sources carry stable citation IDs, so an answer can point at the exact section it used.
+- **Routing with intent** — a LangGraph pipeline sends each request to `answer`, `action`, `escalate`, or `spam`, based on intent, urgency, and how confident retrieval is.
+- **Tools with guardrails** — an allow-listed registry picks and validates the right n8n tool. Repeated low-risk requests are idempotent, so a retry never fires an action twice.
+- **A human in the loop where it counts** — refunds, cancellations, and other high-risk actions don't just happen. They queue for review; approving fires the tool, rejecting closes the request cleanly.
+- **Nothing happens off the record** — Postgres-backed run history, per-step audit events, token and cost accounting, and optional self-hosted Langfuse traces.
+- **A real operator console** — inbox, request traces, the approval queue, cost and usage, evaluation results, and a live console to submit requests to the production graph.
+- **Evidence at release time** — deterministic evaluation gates run on every pull request, and a calibrated LLM judge separately scores answer correctness and citation faithfulness.
 
-## Architecture
+## How it works
+
+One request flows through four layers — ingress, a routing decision, the route's own sub-pipeline, and a permanent record — so every outcome is traceable back to the evidence and gates behind it.
 
 ```mermaid
-flowchart LR
-    A[Email / web / WhatsApp] --> B[Next.js operator console]
-    B --> C[FastAPI]
-    C --> D[LangGraph router]
+flowchart TB
+    subgraph Ingress
+        CH[Web · Email · Chat] --> API[FastAPI /triage]
+    end
 
-    D -->|answer| E[Hybrid retrieval]
-    E --> F[(Postgres + pgvector)]
-    E --> G[Gemini or Ollama answerer]
-    G --> H[Grounded answer + citations]
+    API --> R{LangGraph router}
 
-    D -->|action| I[Allowlisted tool registry]
-    I --> J{Risk gate}
-    J -->|low / medium| K[n8n workflow]
-    J -->|high| L[Human approval queue]
-    L -->|approved| K
+    R -->|answer| RET[Hybrid retrieval<br/>pgvector · RRF]
+    RET --> GATE{Confidence gate}
+    GATE -->|pass| ANS[Grounded answer + citations]
+    GATE -->|too low| ESC[Human escalation]
 
-    D -->|unknown / unsafe| M[Escalation]
-    D -->|spam| N[Safe refusal]
+    R -->|action| VAL[Validate params · Pydantic]
+    VAL --> CRIT{Critic gate}
+    CRIT --> RISK{Risk tier}
+    RISK -->|low / medium| N8N[n8n workflow]
+    RISK -->|high| APP[Approval queue]
+    APP -->|approved| N8N
 
-    C -. run, cost, audit .-> F
-    C -. optional trace .-> O[Langfuse]
+    R -->|escalate| ESC
+    R -->|spam| REJ[Safe refusal]
+
+    API -. run · cost · audit .-> DB[(Postgres + pgvector)]
+    API -. optional trace .-> LF[Langfuse]
 ```
 
-The knowledge base is **Meridian**, a fictional SaaS platform with stable section IDs such as `[key-06]`. Keeping the corpus deterministic makes every citation expectation reproducible. The same ingestion pipeline can index a different Markdown corpus.
+The knowledge base is **Meridian**, a fictional SaaS platform whose docs use stable section IDs like `[key-06]`. A deterministic corpus means every citation expectation is reproducible — but the same ingestion pipeline will happily index any other Markdown corpus.
 
 ## Measured results
 
@@ -81,29 +90,29 @@ Latest checked-in deterministic report: **21 August 2026**.
 | Critical policy failures | **0** |
 | Unimplemented checks | **0** |
 
-These are capability checks, so some cases contribute to more than one row. See the [complete generated score table](./evals/reports/latest.md) and [evaluation design](./evals/README.md).
+These are capability checks, so some cases show up in more than one row. The [full generated score table](./evals/reports/latest.md) and the [evaluation design](./evals/README.md) have the details.
 
-The repository also contains a **300-case semantic suite**. Its structured local judge scores correctness, citation faithfulness, unsupported claims, policy compliance, and clarification behavior. Judge output is accepted only after the chosen model passes fixed calibration anchors. The checked-in table above is the deterministic PR gate; it is not presented as an LLM-judge result.
+There's also a **300-case semantic suite**. Its local judge scores correctness, citation faithfulness, unsupported claims, policy compliance, and clarification behavior — but only after the chosen model clears fixed calibration anchors. The table above is the deterministic PR gate, not an LLM-judge result; the two are kept separate on purpose.
 
-### Target-company documentation test
+### Tested against real-world docs
 
-Sentinel was also tested independently against eight hand-curated, attributed sections derived from Render's public documentation. The same five frozen support tickets improved from **2 / 5** to **5 / 5** under an eight-check deterministic contract after a combined prompt, output-parsing, and model change. The full [Render public-docs case study](./case-studies/render-public-docs.md) includes the fresh-reader failure it uncovered and links every numerical claim to the corpus, rubric, and saved per-ticket reports. This is an independent demonstration, not a Render engagement or endorsement.
+Sentinel was also put up against eight hand-curated, attributed sections from Render's public documentation. The same five frozen support tickets went from **2 / 5** to **5 / 5** under an eight-check deterministic contract after a combined prompt, output-parsing, and model change. The [Render public-docs case study](./case-studies/render-public-docs.md) walks through the fresh-reader failure it surfaced and ties every number back to the corpus, rubric, and saved per-ticket reports. It's an independent demonstration — not a Render engagement or endorsement.
 
-## Reliability evidence
+## Does it fail safely?
 
-Faults are injected at controlled boundaries so the release suite can prove behavior without taking down a developer's machine.
+The interesting question isn't whether it works when everything's healthy — it's what happens when something breaks. Faults are injected at controlled boundaries so the release suite can prove behavior without taking down your machine.
 
-| Injected condition | Required behavior | Current evidence |
+| When this breaks… | …it must | Evidence |
 |---|---|---|
 | Router model unavailable | Fail closed to escalation | Regression test + golden cases + physical shutdown test |
 | Malformed router response | Fail closed to escalation | Regression test + golden reliability cases |
-| Tool timeout | Do not report a successful action; use the defined fallback | Golden reliability cases |
+| Tool timeout | Never report a successful action; use the fallback | Golden reliability cases |
 | Unsafe tool proposal | Block before execution | Critic and safety regression tests |
-| Database unreachable | Fail quickly to human escalation; never fabricate an answer | Regression test + physical shutdown test |
+| Database unreachable | Escalate to a human fast; never fabricate an answer | Regression test + physical shutdown test |
 
-The latest suite passes **55 / 55 reliability-fallback checks**. The repository also contains opt-in tests that physically stop and restore local Ollama and the exact `sentinel-db` Compose service. They are excluded from ordinary test runs so a pull request cannot unexpectedly stop a developer's services.
+The latest suite passes **55 / 55 reliability-fallback checks**. There are also opt-in tests that physically stop and restart local Ollama and the `sentinel-db` Compose service — deliberately excluded from normal runs so a pull request can't kill a developer's services by surprise.
 
-Run the physical shutdown checks on a controlled local machine after starting Ollama and `docker compose up -d --wait db`:
+To run the physical shutdown checks on a machine you control, start Ollama and `docker compose up -d --wait db`, then:
 
 ```powershell
 $env:PYTHONPATH = (Resolve-Path backend).Path
@@ -111,18 +120,18 @@ $env:RUN_LIVE_SHUTDOWN_TESTS = "1"
 python -m pytest -q -s backend/tests/test_live_dependency_shutdown.py
 ```
 
-On non-Windows hosts, also provide `OLLAMA_STOP_COMMAND` and `OLLAMA_START_COMMAND`. Both tests restore their dependency in `finally`; the Postgres test additionally verifies that the chunk count is unchanged after restart.
+On non-Windows hosts, also set `OLLAMA_STOP_COMMAND` and `OLLAMA_START_COMMAND`. Both tests restore their dependency in a `finally` block; the Postgres test additionally checks that the chunk count is unchanged after restart.
 
 ## Quickstart
 
-### Prerequisites
+### You'll need
 
 - Docker Desktop with Compose
 - [Ollama](https://ollama.com)
 - Python 3.12 or newer
 - Node.js 20 or newer
 
-### 1. Configure and start the services
+### 1 · Configure and start the services
 
 ```bash
 cp .env.example .env
@@ -132,9 +141,9 @@ ollama pull llama3.2:3b
 docker compose up -d --wait
 ```
 
-This starts Postgres on `5432`, n8n on `5679`, and Langfuse on `3001`. Values can be changed in `.env`.
+That brings up Postgres on `5432`, n8n on `5679`, and Langfuse on `3001` — all tunable in `.env`.
 
-Sentinel supports independent chat and embedding providers. This hybrid keeps retrieval local and moves the heavier reasoning calls off the laptop:
+Chat and embedding providers are independent, so you can keep retrieval local and push the heavier reasoning off your laptop:
 
 ```dotenv
 LLM_PROVIDER=gemini
@@ -144,9 +153,9 @@ EMBED_PROVIDER=ollama
 EMBED_MODEL=nomic-embed-text
 ```
 
-Keep `GEMINI_API_KEY` only in the root `.env`; it is ignored by Git and must never use a `NEXT_PUBLIC_` prefix. Set both providers to `ollama` for a fully local deployment. Gemini embeddings are supported at 768 dimensions, but switching embedding providers requires a complete re-ingestion because vectors from different models cannot be mixed.
+Keep `GEMINI_API_KEY` in the root `.env` only — it's gitignored and must never carry a `NEXT_PUBLIC_` prefix. Set both providers to `ollama` for a fully local run. Gemini embeddings work at 768 dimensions, but switching embedding providers means a full re-ingestion, since vectors from different models can't be mixed.
 
-### 2. Prepare and run the API
+### 2 · Prepare and run the API
 
 ```bash
 cd backend
@@ -164,9 +173,9 @@ python -m app.cli ingest --reset
 uvicorn app.main:app --reload --port 8000
 ```
 
-The API is now available at [http://localhost:8000/docs](http://localhost:8000/docs).
+The API and its interactive docs are now at [http://localhost:8000/docs](http://localhost:8000/docs).
 
-### 3. Run the operator console
+### 3 · Run the operator console
 
 In another terminal:
 
@@ -176,26 +185,26 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The frontend's same-origin handlers proxy to `SENTINEL_API_URL`, which defaults to `http://localhost:8000`. Create `frontend/.env.local` only when the API uses a different address:
+Open [http://localhost:3000](http://localhost:3000). The frontend's same-origin handlers proxy to `SENTINEL_API_URL`, which defaults to `http://localhost:8000`. Only create `frontend/.env.local` if the API lives somewhere else:
 
 ```dotenv
 SENTINEL_API_URL=http://localhost:8199
 ```
 
-The answer path is ready after ingestion. To execute ticket and invoice workflows, import and activate the supplied n8n workflows using the [n8n setup guide](./n8n/README.md).
+The answer path works as soon as ingestion finishes. To run the ticket and invoice workflows, import and activate the supplied n8n flows using the [n8n setup guide](./n8n/README.md).
 
-## Operator views
+## The operator console
 
-| Route | Purpose |
+| Route | What you'll find |
 |---|---|
-| `/` | Product overview, live system configuration, and latest eval result |
-| `/inbox` | Persisted requests with route and status filters |
-| `/requests/:id` | One request's citations, usage, decision, and audit trail |
+| `/` | Product overview, live system configuration, and the latest eval result |
+| `/inbox` | Persisted requests, filterable by route and status |
+| `/requests/:id` | One request's citations, usage, decision, and full audit trail |
 | `/approvals` | Human review for high-risk actions |
 | `/usage` | Live request, latency, model, channel, cost, and eval metrics |
-| `/console` | Submit a request to the production graph |
+| `/console` | Submit a request straight to the production graph |
 
-The interface does not substitute fake traffic or sample metrics. If the API is unavailable, live values remain unknown and the console shows an offline state.
+Nothing here is faked. If the API is down, live values simply read as unknown and the console shows an offline state — no sample traffic, no placeholder numbers.
 
 ## API surface
 
@@ -203,24 +212,24 @@ The interface does not substitute fake traffic or sample metrics. If the API is 
 |---|---|---|
 | `GET` | `/health` | Service health |
 | `GET` | `/system` | Runtime model, retrieval, tool, and tracing configuration |
-| `POST` | `/ask` | Retrieval-augmented answer or escalation |
-| `POST` | `/triage` | Full routing and action graph |
+| `POST` | `/ask` | Retrieval-augmented answer, or an escalation |
+| `POST` | `/triage` | The full routing and action graph |
 | `GET` | `/runs` | Recent persisted runs |
 | `GET` | `/runs/{id}` | Run detail and audit steps |
 | `GET` | `/stats` | Live operational aggregates |
-| `GET` | `/approvals` | Approval queue |
+| `GET` | `/approvals` | The approval queue |
 | `POST` | `/approvals/{id}/approve` | Approve and trigger a queued tool |
-| `POST` | `/approvals/{id}/reject` | Reject without execution |
+| `POST` | `/approvals/{id}/reject` | Reject without executing |
 
-## Run the evaluations
+## Running the evaluations
 
-The fast deterministic gate exercises the production graph with unsafe external boundaries replaced by in-memory recorders:
+The fast deterministic gate runs the real production graph with unsafe external boundaries swapped for in-memory recorders:
 
 ```bash
 python -m evals.runners.run_golden
 ```
 
-For local semantic scoring, first pull a stronger judge model, calibrate that exact model and prompt, and then run the suite:
+For local semantic scoring, pull a stronger judge model, calibrate that exact model and prompt, then run the suite:
 
 ```bash
 ollama pull llama3.1:8b
@@ -228,9 +237,9 @@ python -m evals.judges.calibrate --model llama3.1:8b
 python -m evals.runners.run_golden --judge ollama --judge-model llama3.1:8b
 ```
 
-The pull-request workflow publishes the generated Markdown score table on the GitHub Actions run summary and uploads the full JSON/Markdown reports. A weekly or manually triggered self-hosted workflow ingests the knowledge base and runs all 300 cases with the calibrated semantic judge.
+On every pull request, CI publishes the generated Markdown score table in the GitHub Actions summary and uploads the full JSON/Markdown reports. A weekly (or manually triggered) self-hosted workflow re-ingests the knowledge base and runs all 300 cases with the calibrated semantic judge.
 
-## Repository map
+## Where things live
 
 ```text
 Sentinel/
@@ -245,7 +254,7 @@ Sentinel/
 └── docker-compose.yml           Postgres, n8n and self-hosted Langfuse
 ```
 
-## Delivery status
+## Status
 
 - [x] LLM-as-judge implementation and model-specific calibration
 - [x] Deterministic evaluations in pull-request CI with a visible score table
@@ -256,10 +265,10 @@ Sentinel/
 - [x] Evidence-mapped project bullets
 - [ ] Public demo link
 
-Only a public deployment destination remains; no public endpoint is implied by the current repository.
+Only a public deployment destination is left; nothing in this repo implies a live public endpoint yet.
 
 ## License
 
 [MIT](./LICENSE) © 2026 Achal Verma
 
-<p align="center"><sub>Every numerical claim above links back to a generated report or executable test.</sub></p>
+<p align="center"><sub>Every number in this README links back to a generated report or an executable test.</sub></p>
