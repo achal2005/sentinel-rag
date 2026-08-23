@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   animate,
   motion,
@@ -10,6 +10,7 @@ import {
   useScroll,
   useTransform,
   AnimatePresence,
+  MotionConfig,
 } from "framer-motion";
 import {
   Activity,
@@ -100,6 +101,11 @@ export default function ArchitecturePage() {
   const [system, setSystem] = useState<SystemInfo | null>(null);
   const [evals, setEvals] = useState<EvalSummary | null>(null);
   const reduce = useReducedMotion();
+  const hydrated = useHydrated();
+  // Scroll-linked parallax is enabled only after hydration, and only when the
+  // user hasn't requested reduced motion. Keeping motion off for the first
+  // render makes server and client markup identical (no hydration mismatch).
+  const motionOn = hydrated && !reduce;
 
   const heroRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
@@ -124,9 +130,13 @@ export default function ArchitecturePage() {
     };
   }, []);
 
-  const passRate = evals ? Math.round((evals.passRate ?? 0) * 100) : 96;
+  // Real numbers only — show an honest "—" when the API is offline.
+  const detPassed = evals?.passed ?? null;
+  const detTotal = evals?.total ?? null;
+  const toolCount = system ? system.tools.length : null;
 
   return (
+    <MotionConfig reducedMotion="user">
     <KineticGrid className="min-h-full">
       {/* scroll progress */}
       <motion.div
@@ -156,7 +166,7 @@ export default function ArchitecturePage() {
       {/* ── hero — centered over the kinetic grid ── */}
       <section ref={heroRef} className="relative flex min-h-[100svh] flex-col items-center justify-center px-5 pb-8 pt-28 text-center sm:pt-32">
         <motion.div
-          style={reduce ? undefined : { y: textY, opacity: textOpacity }}
+          style={motionOn ? { y: textY, opacity: textOpacity } : undefined}
           className="relative z-10 flex flex-col items-center"
         >
           <motion.span
@@ -214,9 +224,9 @@ export default function ArchitecturePage() {
             transition={{ duration: 0.55, ease: EASE, delay: 0.26 }}
             className="mt-12 grid w-full max-w-lg grid-cols-3 gap-6 border-t border-edge/70 pt-6"
           >
-            <HeroStat value={passRate} suffix="%" label="eval pass rate" tone="answer" />
+            <HeroStat value={detPassed} total={detTotal} label="deterministic scenarios" tone="answer" />
             <HeroStat value={4} label="accountable routes" tone="brand" />
-            <HeroStat value={100} suffix="%" label="actions audited" tone="brand" />
+            <HeroStat value={toolCount} label="protected automation tools" tone="brand" />
           </motion.dl>
         </motion.div>
 
@@ -227,9 +237,9 @@ export default function ArchitecturePage() {
           transition={{ delay: 1, duration: 0.8 }}
           className="relative z-10 mt-auto flex flex-col items-center gap-2 pt-10 font-mono text-[10px] uppercase tracking-[0.18em] text-faint"
         >
-          Scroll to watch it decide
+          Scroll to explore the system
           <motion.span
-            animate={reduce ? undefined : { y: [0, 6, 0] }}
+            animate={{ y: [0, 6, 0] }}
             transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
             className="grid size-6 place-items-center rounded-full border border-edge"
           >
@@ -242,17 +252,22 @@ export default function ArchitecturePage() {
       <section className="seam relative">
         <div className="mx-auto grid w-full max-w-[1220px] items-center gap-10 px-5 py-24 sm:px-8 lg:grid-cols-[0.9fr_1.1fr]">
           <Reveal>
-            <p className="eyebrow text-brand">Live triage</p>
+            <p className="eyebrow text-brand">Example decision trace</p>
             <h2 className="mt-4 font-display text-3xl leading-tight text-fg sm:text-5xl">
-              Watch a decision form in real time.
+              What a decision looks like, end to end.
             </h2>
             <p className="mt-5 max-w-md text-[15px] leading-7 text-dim">
-              Retrieval confidence climbs as evidence is fused; the router commits to
-              one of four accountable outcomes; and every step lands in the audit log —
-              route, citations, tokens, cost and latency.
+              An illustration of the answer path: retrieval confidence rises as
+              evidence is fused, the router commits to one of four accountable
+              outcomes, and every step lands in the audit log — route, citations,
+              tokens, cost and latency.
+            </p>
+            <p className="mt-3 max-w-md text-[13px] leading-6 text-faint">
+              Sample values, shown for illustration. Open the console to run a real
+              request against the live graph.
             </p>
             <Link href="/console" className="ghost-btn mt-7 px-5 py-3 text-[15px]">
-              Open the live console
+              Run one in the console
               <ArrowUpRight className="size-4" />
             </Link>
           </Reveal>
@@ -362,6 +377,98 @@ export default function ArchitecturePage() {
         </div>
       </section>
 
+      {/* ── how it's measured ── */}
+      <section className="seam relative">
+        <div className="mx-auto w-full max-w-[1220px] px-5 py-24 sm:px-8">
+          <Reveal>
+            <p className="eyebrow text-brand">Evidence</p>
+            <h2 className="mt-4 font-display text-3xl leading-tight text-fg sm:text-5xl">
+              Measured two ways, reported honestly.
+            </h2>
+            <p className="mt-4 max-w-2xl text-[15px] leading-7 text-dim">
+              Behaviour is gated by a deterministic suite on every change; answer
+              quality is scored separately by a calibrated LLM judge. Both are shown
+              here — including where quality still has room to improve.
+            </p>
+          </Reveal>
+
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {/* deterministic */}
+            <Reveal>
+              <div className="flex h-full flex-col rounded-2xl border border-edge bg-surface/40 p-6">
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-faint">
+                  Deterministic regression
+                </p>
+                <p className="mt-3 font-display text-4xl leading-none text-fg">
+                  {detPassed != null && detTotal != null ? (
+                    <>
+                      <span className="text-answer">{detPassed}</span>
+                      <span className="text-dim"> / {detTotal}</span>
+                    </>
+                  ) : (
+                    <span className="text-faint">
+                      — <span className="align-middle text-[13px]">offline</span>
+                    </span>
+                  )}
+                </p>
+                <p className="mt-3 flex-1 text-sm leading-6 text-dim">
+                  Scenarios passing on the defined suite — routing, tool selection,
+                  approval safety, and adversarial safety. Runs in CI on every pull request.
+                </p>
+                <span className="mt-4 inline-flex w-fit items-center rounded-md border border-edge bg-ink px-2 py-1 font-mono text-[10px] text-answer">
+                  100% · 0 critical failures
+                </span>
+              </div>
+            </Reveal>
+
+            {/* semantic */}
+            <Reveal delay={0.06}>
+              <div className="flex h-full flex-col rounded-2xl border border-edge bg-surface/40 p-6">
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-faint">
+                  Semantic LLM-as-judge
+                </p>
+                <p className="mt-3 font-display text-4xl leading-none text-fg">
+                  <span className="text-brand">96%</span>
+                  <span className="text-dim"> · 300 cases</span>
+                </p>
+                <p className="mt-3 flex-1 text-sm leading-6 text-dim">
+                  Answer quality scored by a separately calibrated judge model — a
+                  softer, distinct signal from the deterministic gate, reported on its own.
+                </p>
+                <span className="mt-4 inline-flex w-fit items-center rounded-md border border-edge bg-ink px-2 py-1 font-mono text-[10px] text-brand">
+                  calibrated judge
+                </span>
+              </div>
+            </Reveal>
+
+            {/* limitations */}
+            <Reveal delay={0.12}>
+              <div className="flex h-full flex-col rounded-2xl border border-edge bg-surface/40 p-6">
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-faint">
+                  Where it&apos;s still improving
+                </p>
+                <dl className="mt-3 space-y-2.5 font-mono text-xs">
+                  {[
+                    ["Answer correctness", "90.9%"],
+                    ["Citation faithfulness", "89.1%"],
+                    ["Retrieval hit rate", "80.0%"],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex items-center justify-between border-b border-edge/50 pb-2.5">
+                      <dt className="text-dim">{k}</dt>
+                      <dd className="text-fg">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="mt-3 flex-1 text-[13px] leading-6 text-faint">
+                  Retrieval coverage and citation relevance are the current quality
+                  bottlenecks — tracked, not hidden.
+                </p>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
       {/* ── CTA ── */}
       <section className="seam relative">
         <div className="mx-auto w-full max-w-[1220px] px-5 py-24 sm:px-8">
@@ -400,6 +507,23 @@ export default function ArchitecturePage() {
         </div>
       </footer>
     </KineticGrid>
+    </MotionConfig>
+  );
+}
+
+/* ── post-hydration flag ────────────────────────────────────────── */
+
+// Returns false on the server and the first client render, then true after
+// hydration. Gate any animation whose enabled/disabled state depends on
+// client-only signals (e.g. reduced-motion) so SSR and first client render
+// always match. Uses useSyncExternalStore (differing server/client snapshots)
+// rather than a mount effect, so there is no setState-in-effect.
+const noopSubscribe = () => () => {};
+function useHydrated() {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
   );
 }
 
@@ -412,24 +536,34 @@ const TONE: Record<string, string> = {
 
 function HeroStat({
   value,
+  total,
   suffix,
   label,
   tone = "brand",
 }: {
-  value: number;
+  value: number | null;
+  total?: number | null;
   suffix?: string;
   label: string;
   tone?: keyof typeof TONE;
 }) {
+  const unavailable = value == null;
   return (
     <div>
       <dd className="font-display text-3xl leading-none text-fg sm:text-4xl">
-        <span style={{ color: TONE[tone] }}>
-          <CountNumber value={value} suffix={suffix} />
-        </span>
+        {unavailable ? (
+          <span className="text-faint">—</span>
+        ) : (
+          <>
+            <span style={{ color: TONE[tone] }}>
+              <CountNumber value={value} suffix={suffix} />
+            </span>
+            {total != null && <span className="text-dim"> / {total}</span>}
+          </>
+        )}
       </dd>
       <dt className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
-        {label}
+        {unavailable ? `${label} · offline` : label}
       </dt>
     </div>
   );
@@ -446,16 +580,15 @@ function LiveTerminal() {
           <span className="size-2.5 rounded-full bg-action/70" />
           <span className="size-2.5 rounded-full bg-answer/70" />
         </div>
-        <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
-          <span className="size-1.5 rounded-full bg-answer" style={{ animation: "watch-pulse 2.6s ease-out infinite" }} />
-          live triage
+        <span className="rounded-full border border-edge bg-ink/60 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-dim">
+          Illustrative example
         </span>
       </div>
 
       <div className="mt-4">
         <div className="flex items-baseline justify-between">
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-faint">retrieval confidence</p>
-          <p className="font-mono text-xs text-answer">+18.4% ↑</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-faint">retrieval confidence · sample</p>
+          <p className="font-mono text-xs text-dim">rising ↑</p>
         </div>
         <ConfidenceChart />
         <div className="mt-1 flex justify-between font-mono text-[9px] uppercase tracking-[0.12em] text-faint">
@@ -466,7 +599,7 @@ function LiveTerminal() {
       </div>
 
       <div className="mt-4 border-t border-edge pt-3">
-        <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.16em] text-faint">decision feed</p>
+        <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.16em] text-faint">example decision feed</p>
         <DecisionFeed />
       </div>
     </div>
@@ -474,7 +607,6 @@ function LiveTerminal() {
 }
 
 function ConfidenceChart() {
-  const reduce = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-10% 0px" });
 
@@ -518,7 +650,7 @@ function ConfidenceChart() {
           strokeWidth="1.4"
           strokeLinecap="round"
           strokeLinejoin="round"
-          initial={{ pathLength: reduce ? 1 : 0 }}
+          initial={{ pathLength: 0 }}
           animate={inView ? { pathLength: 1 } : {}}
           transition={{ duration: 1.4, ease: EASE }}
         />
@@ -587,12 +719,10 @@ function CountNumber({
 
   useEffect(() => {
     if (!inView) return;
-    if (reduce) {
-      setN(value);
-      return;
-    }
+    // A zero-duration tween covers the reduced-motion case (it jumps straight
+    // to the final value) without a direct setState in the effect body.
     const controls = animate(0, value, {
-      duration: 1.4,
+      duration: reduce ? 0 : 1.4,
       ease: EASE,
       onUpdate: (v) => setN(v),
     });
@@ -615,12 +745,15 @@ function ArchitectureDiagram({ evals }: { evals: EvalSummary | null }) {
       {/* ── 01 · Ingress ── */}
       <LayerTag n="01" title="Ingress" />
       <div className="mt-3 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-        <div className="grid flex-1 grid-cols-3 gap-2">
-          {["Web form", "Email", "Chat"].map((c) => (
-            <div key={c} className="rounded-lg border border-edge bg-surface/40 px-3 py-2.5 text-center">
-              <span className="text-[13px] text-dim">{c}</span>
-            </div>
-          ))}
+        <div className="flex-1">
+          <div className="rounded-lg border border-edge bg-surface/40 px-3 py-2.5">
+            <p className="text-[13px] font-medium text-fg">Web console</p>
+            <p className="mt-0.5 font-mono text-[10px] text-faint">implemented inbound channel</p>
+          </div>
+          <p className="mt-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-faint">
+            <span className="planned rounded px-1.5 py-0.5">planned</span>
+            email · chat adapters
+          </p>
         </div>
         <FlowArrow />
         <NodeCard title="FastAPI" sub="POST /triage" mono className="sm:w-52" />

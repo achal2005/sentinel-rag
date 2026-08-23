@@ -25,8 +25,8 @@
   --color-edge: #26264c;
   --color-edge-strong: #3b3b6b;
   --color-fg: #f5f5ff;
-  --color-dim: #a5a5c8;
-  --color-faint: #6e6e96;
+  --color-dim: #b7b7d8;
+  --color-faint: #8c8cb4;
 
   --color-brand: #818cf8;    /* indigo — primary accent          */
   --color-violet: #a78bfa;   /* gradient start                    */
@@ -79,7 +79,7 @@
   --secondary: #1a1a3a;
   --secondary-foreground: #f5f5ff;
   --muted: #1a1a3a;
-  --muted-foreground: #a5a5c8;
+  --muted-foreground: #b7b7d8;
   --accent: #23234a;
   --accent-foreground: #f5f5ff;
   --destructive: #fb7185;
@@ -195,6 +195,16 @@
   background: color-mix(in oklab, var(--color-surface) 62%, transparent);
   backdrop-filter: blur(14px);
   border: 1px solid color-mix(in oklab, var(--color-edge) 82%, transparent);
+}
+
+/* Hide the scrollbar on intentional horizontal-scroll rails (mobile nav). */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Planned / not-yet-implemented markers keep the diagram honest. */
+.planned {
+  border: 1px dashed color-mix(in oklab, var(--color-edge-strong) 90%, transparent);
+  background: color-mix(in oklab, var(--color-surface) 30%, transparent);
 }
 
 /* ── Landing system ─────────────────────────────────────────────── */

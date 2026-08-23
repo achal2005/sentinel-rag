@@ -32,6 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       className={`dark h-full antialiased ${display.variable} ${sans.variable} ${mono.variable}`}
     >
       <body className="min-h-full">{children}</body>

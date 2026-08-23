@@ -310,27 +310,22 @@ export default function KineticGrid({
     [getWarpedPoint, globalColor],
   );
 
-  // ── Animation loop ──────────────────────────────────────────────────────────
-
-  const animate = useCallback(
-    (now: number) => {
-      const m = mouseRef.current;
-      const t = targetMouseRef.current;
-
-      m.x = lerpN(m.x, t.x, LERP_SPEED);
-      m.y = lerpN(m.y, t.y, LERP_SPEED);
-
-      draw(now);
-      rafRef.current = requestAnimationFrame(animate);
-    },
-    [draw],
-  );
-
-  // ── Setup ───────────────────────────────────────────────────────────────────
+  // ── Setup + animation loop ──────────────────────────────────────────────────
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // The rAF loop is defined inside the effect so it can safely reference
+    // itself (and re-binds whenever `draw` changes).
+    const loop = (now: number) => {
+      const m = mouseRef.current;
+      const t = targetMouseRef.current;
+      m.x = lerpN(m.x, t.x, LERP_SPEED);
+      m.y = lerpN(m.y, t.y, LERP_SPEED);
+      draw(now);
+      rafRef.current = requestAnimationFrame(loop);
+    };
 
     const setSize = () => {
       const w = window.innerWidth;
@@ -384,14 +379,14 @@ export default function KineticGrid({
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = 0;
       } else if (!rafRef.current) {
-        rafRef.current = requestAnimationFrame(animate);
+        rafRef.current = requestAnimationFrame(loop);
       }
     };
 
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("click", onClick);
     document.addEventListener("visibilitychange", onVisibility);
-    rafRef.current = requestAnimationFrame(animate);
+    rafRef.current = requestAnimationFrame(loop);
 
     return () => {
       window.removeEventListener("resize", setSize);
@@ -402,7 +397,7 @@ export default function KineticGrid({
         cancelAnimationFrame(rafRef.current);
       }
     };
-  }, [animate, draw]);
+  }, [draw]);
 
   // ── Render ──────────────────────────────────────────────────────────────────
 

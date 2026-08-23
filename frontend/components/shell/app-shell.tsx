@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fetchApprovals } from "@/lib/api";
 import { SystemStatus } from "@/components/console/system-status";
 import { SentinelMark as BrandMark } from "@/components/brand/sentinel-logo";
@@ -12,15 +12,16 @@ import { SentinelMark as BrandMark } from "@/components/brand/sentinel-logo";
 type NavItem = {
   href: string;
   label: string;
+  short: string;
   icon: (p: { className?: string }) => React.ReactNode;
   match: (path: string) => boolean;
 };
 
 const NAV: NavItem[] = [
-  { href: "/inbox", label: "Inbox", icon: InboxIcon, match: (p) => p.startsWith("/inbox") || p.startsWith("/requests") },
-  { href: "/approvals", label: "Approvals", icon: ShieldIcon, match: (p) => p.startsWith("/approvals") },
-  { href: "/usage", label: "Observability", icon: PulseIcon, match: (p) => p.startsWith("/usage") },
-  { href: "/console", label: "Live console", icon: ConsoleIcon, match: (p) => p.startsWith("/console") },
+  { href: "/inbox", label: "Inbox", short: "Inbox", icon: InboxIcon, match: (p) => p.startsWith("/inbox") || p.startsWith("/requests") },
+  { href: "/approvals", label: "Approvals", short: "Approvals", icon: ShieldIcon, match: (p) => p.startsWith("/approvals") },
+  { href: "/usage", label: "Observability", short: "Usage", icon: PulseIcon, match: (p) => p.startsWith("/usage") },
+  { href: "/console", label: "Live console", short: "Console", icon: ConsoleIcon, match: (p) => p.startsWith("/console") },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -92,16 +93,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Brand />
             <SystemStatus />
           </div>
-          <nav className="-mx-1 flex items-center gap-1 overflow-x-auto border-t border-edge/70 pt-2">
-            {NAV.map((item) => (
-              <NavPill
-                key={item.href}
-                item={item}
-                active={item.match(pathname)}
-                badge={item.href === "/approvals" ? pending ?? undefined : undefined}
-              />
-            ))}
-          </nav>
+          {/* Intentional horizontal scroll rail: pills stay full-size, a right
+              fade signals more, and the active route auto-scrolls into view. */}
+          <div className="relative -mx-1 border-t border-edge/70 pt-2">
+            <nav
+              aria-label="Sections"
+              className="no-scrollbar flex snap-x items-center gap-1.5 overflow-x-auto scroll-px-4 px-1 pb-0.5"
+            >
+              {NAV.map((item) => (
+                <NavPill
+                  key={item.href}
+                  item={item}
+                  active={item.match(pathname)}
+                  badge={item.href === "/approvals" ? pending ?? undefined : undefined}
+                />
+              ))}
+              <span aria-hidden className="w-6 shrink-0" />
+            </nav>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute bottom-0 right-0 top-2 w-10 bg-gradient-to-l from-ink to-transparent"
+            />
+          </div>
         </header>
 
         <main className="flex-1">{children}</main>
@@ -182,17 +195,28 @@ function NavPill({
   active: boolean;
   badge?: number;
 }) {
+  const Icon = item.icon;
+  const ref = useRef<HTMLAnchorElement>(null);
+
+  // Keep the current route visible in the scroll rail (fixes the clipped
+  // "Console" item at ~390px) without nudging the page vertically.
+  useEffect(() => {
+    if (active) ref.current?.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [active]);
+
   return (
     <Link
+      ref={ref}
       href={item.href}
       aria-current={active ? "page" : undefined}
-      className={`inline-flex shrink-0 items-center gap-2 border px-3 py-1.5 text-sm transition ${
+      className={`inline-flex min-h-9 shrink-0 snap-start items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition ${
         active
           ? "border-edge-strong bg-surface-2 text-fg"
           : "border-transparent text-dim hover:border-edge hover:text-fg"
       }`}
     >
-      {item.label}
+      <Icon className={active ? "size-3.5 text-brand" : "size-3.5 text-faint"} />
+      {item.short}
       {badge !== undefined && badge > 0 && <CountBadge n={badge} />}
     </Link>
   );
