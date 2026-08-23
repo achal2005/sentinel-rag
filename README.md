@@ -1,161 +1,259 @@
-<h1 align="center">Sentinel</h1>
+<a id="top"></a>
 
-<p align="center">
-  <strong>An evidence-first AI support operator.</strong><br />
-  It answers only when it can cite the source, acts only through tools it's allowed to use, and asks a human before anything risky.
-</p>
+<div align="center">
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white" alt="Python 3.12+" />
-  <img src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white" alt="Next.js 16" />
-  <img src="https://img.shields.io/badge/API-v0.2-009688?logo=fastapi&logoColor=white" alt="FastAPI API version 0.2" />
-  <img src="https://img.shields.io/badge/Postgres-pgvector-4169E1?logo=postgresql&logoColor=white" alt="Postgres with pgvector" />
-  <img src="https://img.shields.io/badge/Ollama-local-000000?logo=ollama&logoColor=white" alt="Ollama" />
-  <img src="https://img.shields.io/badge/Gemini-supported-4285F4?logo=google&logoColor=white" alt="Gemini API supported" />
-  <img src="https://img.shields.io/badge/evals-245%2F245-38D6A3" alt="245 of 245 deterministic evals passing" />
-</p>
+# 🛡️ Sentinel
+
+### An evidence-first AI support operator
+
+*Answers from documentation. Executes only approved tools. Escalates when the evidence is weak.*
+
+<br />
+
+<img src="https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12+" />
+<img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" />
+<img src="https://img.shields.io/badge/LangGraph-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white" alt="LangGraph" />
+<img src="https://img.shields.io/badge/Next.js_16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js 16" />
+<img src="https://img.shields.io/badge/Postgres_+_pgvector-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="Postgres + pgvector" />
+<br />
+<a href="./evals/reports/latest.md"><img src="https://img.shields.io/badge/Deterministic_evals-245%2F245_passing-38D6A3?style=for-the-badge" alt="245/245 deterministic evals passing" /></a>
+<a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-38D6A3?style=for-the-badge" alt="MIT License" /></a>
+
+<br />
+
+**[Why](#why) · [Architecture](#architecture) · [Evidence](#evidence) · [Safety](#safety) · [Run locally](#run-locally) · [Case study](#case-study)**
+
+<br />
+
+<img src="./assets/demo/sentinel-demo.gif" alt="Sentinel resolving a grounded support request" width="90%" />
+
+</div>
 
 ---
 
-Most "AI support" bots answer with total confidence whether or not they actually know the answer — and they'll happily take actions no one signed off on. Sentinel is built around the opposite instinct.
+<a id="why"></a>
 
-When a request comes in, Sentinel decides what to do with it: **answer** it from the docs, take an **action** on the user's behalf, **escalate** it to a person, or drop it as **spam**. Whatever it chooses, it shows its work. Answers come with the exact passages they're based on. Actions only run if they're on an allow-list and their parameters check out. Anything high-risk waits in a queue for a human to approve. And every step — the route it picked, the chunks it cited, the tokens it burned, the approval someone granted — is written down and inspectable in the console.
+## 🧭 Why Sentinel
 
-> The whole thing rests on one promise: **prove the answer with a citation, or hand it to a human.** No confident guessing.
+A support agent should not confidently invent an answer or silently perform a risky action.
 
-## See it in action
+Sentinel handles incoming requests from its web console through one of four routes:
 
-Recorded against the local stack — it asks a real documentation question, gets a grounded answer, opens the persisted trace behind that answer, and lands on the generated evaluation report.
+| Route | What happens |
+|---|---|
+| 🟢 **Answer** | Retrieve supporting documentation and return a **cited** response. |
+| 🟡 **Action** | Validate parameters and invoke an **allow-listed** automation. |
+| 🔴 **Escalate** | Hand the request to a human when evidence, intent, or safety is insufficient. |
+| ⚪ **Spam / refuse** | Reject unsafe or irrelevant requests without taking action. |
 
-![Sentinel resolving a grounded support request](./assets/demo/sentinel-demo.gif)
+The core design principle is simple:
 
-## What it does
+> ### 💡 Cite the evidence, perform only authorized actions, or escalate.
 
-- **Answers you can trust** — hybrid vector + full-text retrieval over pgvector, fused with Reciprocal Rank Fusion, gated on a confidence threshold. Sources carry stable citation IDs, so an answer can point at the exact section it used.
-- **Routing with intent** — a LangGraph pipeline sends each request to `answer`, `action`, `escalate`, or `spam`, based on intent, urgency, and how confident retrieval is.
-- **Tools with guardrails** — an allow-listed registry picks and validates the right n8n tool. Repeated low-risk requests are idempotent, so a retry never fires an action twice.
-- **A human in the loop where it counts** — refunds, cancellations, and other high-risk actions don't just happen. They queue for review; approving fires the tool, rejecting closes the request cleanly.
-- **Nothing happens off the record** — Postgres-backed run history, per-step audit events, token and cost accounting, and optional self-hosted Langfuse traces.
-- **A real operator console** — inbox, request traces, the approval queue, cost and usage, evaluation results, and a live console to submit requests to the production graph.
-- **Evidence at release time** — deterministic evaluation gates run on every pull request, and a calibrated LLM judge separately scores answer correctness and citation faithfulness.
+---
 
-## How it works
+## 🧱 What I built
 
-One request flows through four layers — ingress, a routing decision, the route's own sub-pipeline, and a permanent record — so every outcome is traceable back to the evidence and gates behind it.
+|  |  |
+|---|---|
+| **🔎 Grounded RAG** | Heading-aware ingestion, pgvector semantic search, Postgres full-text search, Reciprocal Rank Fusion, confidence gating, and stable citation IDs. |
+| **🕸️ Agent orchestration** | A LangGraph state machine that routes each request through answer, action, escalation, or refusal paths. |
+| **🔐 Safe automation** | Pydantic-validated n8n tools, deterministic policy checks, risk tiers, approval queues, and idempotency protection. |
+| **🖥️ Operator experience** | A Next.js console for inboxes, request traces, citations, audit history, approval decisions, usage, and live triage. |
+| **📈 Observability** | Persisted runs, per-step audit events, token/cost tracking, and optional self-hosted Langfuse traces. |
+| **🧪 Evaluation & CI** | Deterministic regression checks on pull requests, plus a separately calibrated semantic LLM-as-judge suite. |
+
+---
+
+<a id="architecture"></a>
+
+## 🗺️ Architecture
+
+One request flows through four layers — **ingress → routing decision → the route's own sub-pipeline → a permanent record** — so every outcome is traceable back to the evidence and gates behind it.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#161633','primaryTextColor':'#e9e9ff','primaryBorderColor':'#818cf8','lineColor':'#7c7ca3','secondaryColor':'#12122a','tertiaryColor':'#0b0b1a','fontFamily':'ui-sans-serif, system-ui'}}}%%
 flowchart TB
-    subgraph Ingress
-        CH[Web · Email · Chat] --> API[FastAPI /triage]
-    end
+    WEB[🖥️ Web console] --> API[⚙️ FastAPI /triage]
 
-    API --> R{LangGraph router}
+    API --> ROUTER{🧠 LangGraph router}
 
-    R -->|answer| RET[Hybrid retrieval<br/>pgvector · RRF]
-    RET --> GATE{Confidence gate}
-    GATE -->|pass| ANS[Grounded answer + citations]
-    GATE -->|too low| ESC[Human escalation]
+    ROUTER -->|answer| RETRIEVE[🔎 Hybrid retrieval<br/>pgvector + Postgres FTS + RRF]
+    RETRIEVE --> GATE{Evidence confidence gate}
+    GATE -->|grounded| ANSWER[✅ Cited answer]
+    GATE -->|weak evidence| ESCALATE[🙋 Human escalation]
 
-    R -->|action| VAL[Validate params · Pydantic]
-    VAL --> CRIT{Critic gate}
-    CRIT --> RISK{Risk tier}
-    RISK -->|low / medium| N8N[n8n workflow]
-    RISK -->|high| APP[Approval queue]
-    APP -->|approved| N8N
+    ROUTER -->|action| VALIDATE[🧾 Pydantic parameter validation]
+    VALIDATE --> CRITIC[🛡️ Deterministic safety critic]
+    CRITIC --> RISK{Risk tier}
 
-    R -->|escalate| ESC
-    R -->|spam| REJ[Safe refusal]
+    RISK -->|low risk| N8N[⚡ n8n workflow]
+    RISK -->|high risk| APPROVAL[👤 Human approval queue]
+    APPROVAL -->|approved| N8N
 
-    API -. run · cost · audit .-> DB[(Postgres + pgvector)]
-    API -. optional trace .-> LF[Langfuse]
+    ROUTER -->|unsafe / spam| REFUSE[🚫 Safe refusal]
+
+    API -. persisted evidence .-> DB[(🗄️ Postgres + pgvector)]
+    API -. optional traces .-> LANGFUSE[🔭 Langfuse]
 ```
 
-The knowledge base is **Meridian**, a fictional SaaS platform whose docs use stable section IDs like `[key-06]`. A deterministic corpus means every citation expectation is reproducible — but the same ingestion pipeline will happily index any other Markdown corpus.
+---
 
-## Measured results
+<a id="evidence"></a>
 
-Latest checked-in deterministic report: **21 August 2026**.
+## 📊 Evidence
+
+### Deterministic regression suite
+
+The pull-request gate runs **245 deterministic scenarios** against the production graph with external side effects safely controlled.
 
 | Metric | Result |
 |---|---:|
-| Cases executed | **245 / 245** |
+| Scenarios executed | **245 / 245** |
 | Overall pass rate | **100%** |
-| Routing | **245 / 245** |
 | Citation checks | **90 / 90** |
-| Tool selection | **120 / 120** |
-| Approval safety | **282 / 282** |
-| Reliability fallback | **55 / 55** |
-| Adversarial safety | **160 / 160** |
-| Multi-turn behavior | **40 / 40** |
+| Tool-selection checks | **120 / 120** |
+| Approval-safety checks | **282 / 282** |
+| Reliability-fallback checks | **55 / 55** |
+| Adversarial-safety checks | **160 / 160** |
 | Critical policy failures | **0** |
-| Unimplemented checks | **0** |
 
-These are capability checks, so some cases show up in more than one row. The [full generated score table](./evals/reports/latest.md) and the [evaluation design](./evals/README.md) have the details.
+These are overlapping capability checks, so a single scenario can contribute to multiple rows. Full results: **[deterministic report →](./evals/reports/latest.md)**
 
-There's also a **300-case semantic suite**. Its local judge scores correctness, citation faithfulness, unsupported claims, policy compliance, and clarification behavior — but only after the chosen model clears fixed calibration anchors. The table above is the deterministic PR gate, not an LLM-judge result; the two are kept separate on purpose.
+### Semantic answer-quality evaluation
 
-### Tested against real-world docs
+A separate **calibrated LLM-as-judge** run evaluates answer *quality* rather than only deterministic behavior.
 
-Sentinel was also put up against eight hand-curated, attributed sections from Render's public documentation. The same five frozen support tickets went from **2 / 5** to **5 / 5** under an eight-check deterministic contract after a combined prompt, output-parsing, and model change. The [Render public-docs case study](./case-studies/render-public-docs.md) walks through the fresh-reader failure it surfaced and ties every number back to the corpus, rubric, and saved per-ticket reports. It's an independent demonstration — not a Render engagement or endorsement.
+| Metric | Result |
+|---|---:|
+| Cases executed | **300** |
+| Overall pass rate | **96.0%** |
+| Answer correctness | **90.9%** |
+| Citation faithfulness | **89.1%** |
+| Retrieval hit rate | **80.0%** |
+| Critical policy failures | **0** |
 
-## Does it fail safely?
+This result is intentionally reported separately from the deterministic gate. It shows that routing and safety behavior are highly reliable on the defined suite, while retrieval quality and citation relevance still have room to improve. Full results, including the 12 failures: **[semantic report →](./evals/reports/semantic_300/latest.md)**
 
-The interesting question isn't whether it works when everything's healthy — it's what happens when something breaks. Faults are injected at controlled boundaries so the release suite can prove behavior without taking down your machine.
+---
 
-| When this breaks… | …it must | Evidence |
-|---|---|---|
-| Router model unavailable | Fail closed to escalation | Regression test + golden cases + physical shutdown test |
-| Malformed router response | Fail closed to escalation | Regression test + golden reliability cases |
-| Tool timeout | Never report a successful action; use the fallback | Golden reliability cases |
-| Unsafe tool proposal | Block before execution | Critic and safety regression tests |
-| Database unreachable | Escalate to a human fast; never fabricate an answer | Regression test + physical shutdown test |
+<a id="safety"></a>
 
-The latest suite passes **55 / 55 reliability-fallback checks**. There are also opt-in tests that physically stop and restart local Ollama and the `sentinel-db` Compose service — deliberately excluded from normal runs so a pull request can't kill a developer's services by surprise.
+## 🛡️ Safety behavior
 
-To run the physical shutdown checks on a machine you control, start Ollama and `docker compose up -d --wait db`, then:
+| Failure or risk | Sentinel behavior |
+|---|---|
+| Weak retrieval evidence | Escalates instead of inventing an answer |
+| Router / model failure | Fails closed to escalation |
+| Malformed model output | Uses a safe fallback |
+| Unsafe or prompt-injection request | Blocks execution and escalates |
+| High-risk action | Requires human approval |
+| Duplicate low-risk action | Reuses the idempotent result |
+| Database unavailable | Escalates rather than fabricating state |
+| Tool / webhook failure | Never reports an action as successful |
 
-```powershell
-$env:PYTHONPATH = (Resolve-Path backend).Path
-$env:RUN_LIVE_SHUTDOWN_TESTS = "1"
-python -m pytest -q -s backend/tests/test_live_dependency_shutdown.py
-```
+> 🔒 High-risk actions are checked **twice** — once before entering the approval queue and again immediately before execution.
 
-On non-Windows hosts, also set `OLLAMA_STOP_COMMAND` and `OLLAMA_START_COMMAND`. Both tests restore their dependency in a `finally` block; the Postgres test additionally checks that the chunk count is unchanged after restart.
+---
 
-## Quickstart
+<a id="case-study"></a>
 
-### You'll need
+## 🔬 Public-documentation case study
 
-- Docker Desktop with Compose
-- [Ollama](https://ollama.com)
-- Python 3.12 or newer
-- Node.js 20 or newer
+I tested Sentinel against a small, attributed corpus derived from public Render documentation.
 
-### 1 · Configure and start the services
+<table>
+<tr><td>🎫 <b>Frozen tickets</b></td><td>5 author-created support tickets</td></tr>
+<tr><td>✅ <b>Checks per ticket</b></td><td>8 deterministic checks</td></tr>
+<tr><td>📉 <b>Baseline config</b></td><td><b>2 / 5</b> strict passes</td></tr>
+<tr><td>📈 <b>Improved config</b></td><td><b>5 / 5</b> strict passes</td></tr>
+<tr><td>⚖️ <b>Trade-off</b></td><td>The improved local 8B model raised mean latency from <b>9.8 s</b> → <b>63.5 s</b> per ticket</td></tr>
+</table>
+
+The experiment is an auditable technical demonstration — **not** a Render partnership, endorsement, or production benchmark.
+
+Read the full methodology, limitations, reports, and saved evidence: **[Sentinel × Render case study →](./case-studies/render-public-docs.md)**
+
+---
+
+## 🧰 Tech stack
+
+<div align="center">
+
+**Backend & orchestration**
+
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
+![Pydantic](https://img.shields.io/badge/Pydantic-E92063?style=flat-square&logo=pydantic&logoColor=white)
+![Uvicorn](https://img.shields.io/badge/Uvicorn-2094f3?style=flat-square)
+![LangGraph](https://img.shields.io/badge/LangGraph-1C3C3C?style=flat-square&logo=langchain&logoColor=white)
+
+**Retrieval & data**
+
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)
+![pgvector](https://img.shields.io/badge/pgvector-4169E1?style=flat-square)
+![Postgres FTS](https://img.shields.io/badge/Postgres_FTS-4169E1?style=flat-square)
+![RRF](https://img.shields.io/badge/Reciprocal_Rank_Fusion-6E6E96?style=flat-square)
+
+**Models & automation**
+
+![Ollama](https://img.shields.io/badge/Ollama-000000?style=flat-square&logo=ollama&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini-4285F4?style=flat-square&logo=googlegemini&logoColor=white)
+![n8n](https://img.shields.io/badge/n8n-EA4B71?style=flat-square&logo=n8n&logoColor=white)
+
+**Frontend**
+
+![Next.js](https://img.shields.io/badge/Next.js_16-000000?style=flat-square&logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React_19-61DAFB?style=flat-square&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
+
+**Testing, CI & observability**
+
+![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?style=flat-square&logo=pytest&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white)
+![Langfuse](https://img.shields.io/badge/Langfuse-0A0A0A?style=flat-square)
+![PEFT LoRA](https://img.shields.io/badge/PEFT_LoRA_on_Kaggle_T4-20BEFF?style=flat-square&logo=kaggle&logoColor=white)
+
+</div>
+
+---
+
+<a id="run-locally"></a>
+
+## ⚡ Run locally
+
+**Prerequisites** — Docker Desktop with Compose · Python 3.12+ · Node.js 20+ · Ollama (or a Gemini API key for hosted chat generation)
+
+<details open>
+<summary><b>1 · Configure services</b></summary>
+
+<br />
 
 ```bash
 cp .env.example .env
 ollama pull nomic-embed-text
-# Only needed when LLM_PROVIDER=ollama:
 ollama pull llama3.2:3b
 docker compose up -d --wait
 ```
 
-That brings up Postgres on `5432`, n8n on `5679`, and Langfuse on `3001` — all tunable in `.env`.
-
-Chat and embedding providers are independent, so you can keep retrieval local and push the heavier reasoning off your laptop:
+To use Gemini for chat while keeping embeddings local:
 
 ```dotenv
 LLM_PROVIDER=gemini
 CHAT_MODEL=gemini-2.5-flash
 GEMINI_API_KEY=your-backend-only-key
+
 EMBED_PROVIDER=ollama
 EMBED_MODEL=nomic-embed-text
 ```
 
-Keep `GEMINI_API_KEY` in the root `.env` only — it's gitignored and must never carry a `NEXT_PUBLIC_` prefix. Set both providers to `ollama` for a fully local run. Gemini embeddings work at 768 dimensions, but switching embedding providers means a full re-ingestion, since vectors from different models can't be mixed.
+</details>
 
-### 2 · Prepare and run the API
+<details>
+<summary><b>2 · Start the backend</b></summary>
+
+<br />
 
 ```bash
 cd backend
@@ -173,11 +271,14 @@ python -m app.cli ingest --reset
 uvicorn app.main:app --reload --port 8000
 ```
 
-The API and its interactive docs are now at [http://localhost:8000/docs](http://localhost:8000/docs).
+Open API documentation at **[localhost:8000/docs](http://localhost:8000/docs)**.
 
-### 3 · Run the operator console
+</details>
 
-In another terminal:
+<details>
+<summary><b>3 · Start the operator console</b></summary>
+
+<br />
 
 ```bash
 cd frontend
@@ -185,90 +286,55 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The frontend's same-origin handlers proxy to `SENTINEL_API_URL`, which defaults to `http://localhost:8000`. Only create `frontend/.env.local` if the API lives somewhere else:
+Open **[localhost:3000](http://localhost:3000)**.
 
-```dotenv
-SENTINEL_API_URL=http://localhost:8199
-```
+For real local n8n workflows, import the supplied workflow files using the **[n8n setup guide](./n8n/README.md)**.
 
-The answer path works as soon as ingestion finishes. To run the ticket and invoice workflows, import and activate the supplied n8n flows using the [n8n setup guide](./n8n/README.md).
+</details>
 
-## The operator console
+---
 
-| Route | What you'll find |
-|---|---|
-| `/` | Product overview, live system configuration, and the latest eval result |
-| `/inbox` | Persisted requests, filterable by route and status |
-| `/requests/:id` | One request's citations, usage, decision, and full audit trail |
-| `/approvals` | Human review for high-risk actions |
-| `/usage` | Live request, latency, model, channel, cost, and eval metrics |
-| `/console` | Submit a request straight to the production graph |
+## 📁 Repository map
 
-Nothing here is faked. If the API is down, live values simply read as unknown and the console shows an offline state — no sample traffic, no placeholder numbers.
+<details>
+<summary><b>Where everything lives</b></summary>
 
-## API surface
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| `GET` | `/health` | Service health |
-| `GET` | `/system` | Runtime model, retrieval, tool, and tracing configuration |
-| `POST` | `/ask` | Retrieval-augmented answer, or an escalation |
-| `POST` | `/triage` | The full routing and action graph |
-| `GET` | `/runs` | Recent persisted runs |
-| `GET` | `/runs/{id}` | Run detail and audit steps |
-| `GET` | `/stats` | Live operational aggregates |
-| `GET` | `/approvals` | The approval queue |
-| `POST` | `/approvals/{id}/approve` | Approve and trigger a queued tool |
-| `POST` | `/approvals/{id}/reject` | Reject without executing |
-
-## Running the evaluations
-
-The fast deterministic gate runs the real production graph with unsafe external boundaries swapped for in-memory recorders:
-
-```bash
-python -m evals.runners.run_golden
-```
-
-For local semantic scoring, pull a stronger judge model, calibrate that exact model and prompt, then run the suite:
-
-```bash
-ollama pull llama3.1:8b
-python -m evals.judges.calibrate --model llama3.1:8b
-python -m evals.runners.run_golden --judge ollama --judge-model llama3.1:8b
-```
-
-On every pull request, CI publishes the generated Markdown score table in the GitHub Actions summary and uploads the full JSON/Markdown reports. A weekly (or manually triggered) self-hosted workflow re-ingests the knowledge base and runs all 300 cases with the calibrated semantic judge.
-
-## Where things live
+<br />
 
 ```text
-Sentinel/
-├── backend/app/                 FastAPI, graph, RAG, tools, approvals, audit
-├── backend/tests/               safety, graph, conversation, tool and trace tests
-├── frontend/                    Next.js operator console and API proxy routes
-├── docs/                        Meridian knowledge base
-├── evals/                       300-case dataset, judges, runners and reports
-├── n8n/                         SQL, workflow exports and setup guide
-├── finetune/                    reproducible LoRA routing experiment
-├── .github/workflows/           pull-request and full semantic evaluation gates
-└── docker-compose.yml           Postgres, n8n and self-hosted Langfuse
+backend/app/       FastAPI, RAG, LangGraph, tools, audit, providers
+backend/tests/     Unit, graph, safety, conversation, and shutdown tests
+frontend/          Next.js operator console and API proxy routes
+docs/              Meridian documentation corpus
+evals/             300-case suite, judges, runners, reports, CI contracts
+n8n/               Workflow exports and SQL setup
+finetune/          Reproducible LoRA routing experiment
+case-studies/      Public-documentation evaluation case study
+DEPLOY.md          Portfolio-demo deployment guidance
 ```
 
-## Status
+</details>
 
-- [x] LLM-as-judge implementation and model-specific calibration
-- [x] Deterministic evaluations in pull-request CI with a visible score table
-- [x] Deterministic reliability and safety fault injection
-- [x] Current README, architecture diagram, quickstart, evidence table, and live demo GIF
-- [x] Physical Ollama and Postgres shutdown integration tests
-- [x] Five-ticket target-company public-docs demo and final case study
-- [x] Evidence-mapped project bullets
-- [ ] Public demo link
+---
 
-Only a public deployment destination is left; nothing in this repo implies a live public endpoint yet.
+## 🧩 Limitations & next steps
 
-## License
+- The implemented inbound channel is currently the **web console**; email and chat adapters are future work.
+- The semantic evaluation is not perfect: **citation faithfulness and retrieval coverage** remain the main quality bottlenecks.
+- The Render study contains five frozen tickets and is a **demonstration**, not a statistically significant benchmark.
+- The public-demo deployment is **not live yet**.
+- The production Compose configuration defaults to **simulated** high-risk tools; real side effects should only be enabled in a sandboxed integration.
 
-[MIT](./LICENSE) © 2026 Achal Verma
+---
 
-<p align="center"><sub>Every number in this README links back to a generated report or an executable test.</sub></p>
+<div align="center">
+
+## 📄 License
+
+[MIT](./LICENSE) © 2026 **Achal Verma**
+
+<sub>Every number in this README links back to a generated report or an executable test.</sub>
+
+**[↑ Back to top](#top)**
+
+</div>
