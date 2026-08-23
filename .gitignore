@@ -38,3 +38,14 @@ AgentOps_9-10_Final_Build_Plan.md
 Sentinel_Week1_Guide.pdf
 Sentinel_Build_Roadmap.pdf
 n8n/credentials.local.json
+
+# Internal narrative/build-log doc — kept local; README is authoritative.
+context.md
+
+# Scratch / generated output & local UI captures — never publish.
+output/
+tmp/
+.codex/
+landing.png
+usage3.png
+frontend/artifacts/
