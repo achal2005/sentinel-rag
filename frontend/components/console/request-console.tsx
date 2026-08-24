@@ -4,12 +4,15 @@ import { useState } from "react";
 import { routeColor } from "@/lib/routes";
 import type { RouteKey } from "@/lib/types";
 
-// One example per outcome, so a first-time visitor can exercise the whole router.
-const EXAMPLES: { label: string; query: string }[] = [
+// One example per outcome, so a first-time visitor can exercise the whole
+// router. `highRisk` marks an example whose action is held for human approval
+// rather than executed — the chip flags it so the safety model is legible.
+const EXAMPLES: { label: string; query: string; highRisk?: boolean }[] = [
   { label: "Rotate an API key", query: "How do I rotate an API key?" },
   {
     label: "Cancel an invoice",
     query: "Please cancel invoice INV-2231, we were double charged.",
+    highRisk: true,
   },
   {
     label: "Prompt injection",
@@ -99,12 +102,29 @@ export function RequestConsole({
               submit(ex.query);
             }}
             disabled={pending}
-            className="border border-edge px-3 py-1 text-xs text-dim transition hover:border-edge-strong hover:text-fg disabled:opacity-40"
+            title={ex.highRisk ? "High-risk action — held for human approval, not executed" : undefined}
+            aria-label={ex.highRisk ? `${ex.label} — high-risk, held for human approval` : ex.label}
+            className={`inline-flex items-center gap-1.5 border px-3 py-1 text-xs transition disabled:opacity-40 ${
+              ex.highRisk
+                ? "border-action/45 text-action hover:border-action"
+                : "border-edge text-dim hover:border-edge-strong hover:text-fg"
+            }`}
           >
+            {ex.highRisk && (
+              <span
+                className="size-1.5 rounded-full bg-action"
+                style={{ boxShadow: "0 0 7px -1px var(--color-action)" }}
+                aria-hidden
+              />
+            )}
             {ex.label}
           </button>
         ))}
       </div>
+      <p className="mt-2.5 font-mono text-[11px] leading-relaxed text-faint">
+        Safe examples. The amber one proposes a high-risk action — it&apos;s validated and
+        queued for human approval, never executed automatically.
+      </p>
     </div>
   );
 }

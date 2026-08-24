@@ -69,7 +69,7 @@ export default function UsagePage() {
       </div>
 
       {loading ? (
-        <p className="mt-8 font-mono text-xs text-faint">Loading stats…</p>
+        <LoadingSkeleton />
       ) : (
         <>
           {/* cost */}
@@ -103,6 +103,13 @@ export default function UsagePage() {
                 ))}
               </div>
 
+              {stats && stats.requests_today === 0 && (
+                <p className="mt-3 text-xs leading-relaxed text-dim">
+                  No requests handled yet today—these figures stay at zero until the first run,
+                  then the console will populate them live.
+                </p>
+              )}
+
               {/* breakdowns */}
               <div className="mt-8 grid gap-4 lg:grid-cols-2">
                 <BreakdownPanel
@@ -131,6 +138,57 @@ export default function UsagePage() {
           <Reliability evals={evals} />
         </>
       )}
+    </div>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div aria-hidden className="animate-none">
+      {/* cost */}
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        {[0, 1].map((i) => (
+          <div key={i} className="rounded-2xl clay bg-surface p-5">
+            <div className="skeleton h-3 w-24" />
+            <div className="skeleton mt-2 h-10 w-32" />
+            <div className="skeleton mt-2 h-3.5 w-40" />
+          </div>
+        ))}
+      </div>
+
+      {/* stat cards */}
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="rounded-2xl clay bg-surface p-5">
+            <div className="skeleton h-3 w-20" />
+            <div className="skeleton mt-2 h-8 w-16" />
+            <div className="skeleton mt-2 h-3 w-24" />
+          </div>
+        ))}
+      </div>
+
+      {/* breakdowns */}
+      <div className="mt-8 grid gap-4 lg:grid-cols-2">
+        {[0, 1].map((i) => (
+          <div key={i} className="rounded-2xl clay bg-surface p-5">
+            <div className="flex items-baseline justify-between">
+              <div className="skeleton h-3.5 w-28" />
+              <div className="skeleton h-3 w-16" />
+            </div>
+            <div className="mt-4 space-y-3">
+              {[0, 1, 2].map((j) => (
+                <div key={j}>
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <div className="skeleton h-3.5 w-24" />
+                    <div className="skeleton h-3 w-6" />
+                  </div>
+                  <div className="skeleton h-2 w-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -167,7 +225,12 @@ function BreakdownPanel({
         <span className="eyebrow">{caption}</span>
       </div>
       {rows.length === 0 ? (
-        <p className="mt-4 font-mono text-xs text-faint">No data yet today.</p>
+        <div className="mt-4">
+          <p className="font-mono text-xs text-faint">No data yet today.</p>
+          <p className="mt-1 text-xs leading-relaxed text-dim">
+            No requests handled yet today—this panel will populate as runs come in.
+          </p>
+        </div>
       ) : (
         <ul className="mt-4 space-y-3">
           {rows.map((r) => {
