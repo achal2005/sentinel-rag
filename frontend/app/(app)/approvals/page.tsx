@@ -130,7 +130,10 @@ export default function ApprovalsPage() {
       {/* queue */}
       <div className="mt-7 space-y-4">
         {loading && !items.length ? (
-          <p className="py-10 text-center font-mono text-xs text-faint">Loading queue…</p>
+          <>
+            <ApprovalCardSkeleton />
+            <ApprovalCardSkeleton />
+          </>
         ) : !error && items.length === 0 ? (
           <EmptyState />
         ) : (
@@ -150,6 +153,39 @@ export default function ApprovalsPage() {
   );
 }
 
+/** Placeholder that mirrors ApprovalCard's shape so the layout doesn't jump
+ * when real items arrive. Obviously a placeholder — never fake pending data. */
+function ApprovalCardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-2xl clay bg-surface" aria-hidden>
+      <div className="h-0.5 w-full bg-edge" />
+      <div className="space-y-4 p-5 sm:p-6">
+        {/* header: risk-badge-sized block + short mono line, timestamp on the right */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="skeleton h-5 w-16 rounded-full" />
+          <div className="skeleton h-3.5 w-20" />
+          <div className="skeleton ml-auto h-3 w-12" />
+        </div>
+
+        {/* proposed action */}
+        <div className="space-y-2">
+          <div className="skeleton h-3 w-24" />
+          <div className="skeleton h-4 w-52" />
+        </div>
+
+        {/* footer: two button-sized blocks on the right */}
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <div className="skeleton h-3 w-32" />
+          <div className="flex items-center gap-2.5">
+            <div className="skeleton h-7 w-16 rounded-[min(var(--radius-md),12px)]" />
+            <div className="skeleton h-7 w-28 rounded-[min(var(--radius-md),12px)]" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EmptyState() {
   return (
     <div className="rounded-2xl clay bg-surface px-6 py-16 text-center">
@@ -163,8 +199,12 @@ function EmptyState() {
       </span>
       <p className="mt-4 text-sm text-fg">All caught up — nothing needs your approval.</p>
       <p className="mt-1 font-mono text-xs text-faint">
-        High-risk actions from the console will surface here.
+        A quiet queue is the healthy state. High-risk actions from the console will surface here.
       </p>
+      <Link href="/console" className="beacon-btn group mt-6">
+        Open the live console
+        <span className="transition-transform group-hover:translate-x-0.5" aria-hidden>→</span>
+      </Link>
     </div>
   );
 }

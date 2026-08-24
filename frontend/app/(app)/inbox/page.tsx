@@ -112,7 +112,11 @@ export default function InboxPage() {
         {error ? (
           <Offline message={error} onRetry={load} />
         ) : loading ? (
-          <p className="px-6 py-16 text-center font-mono text-xs text-faint">Loading inbox…</p>
+          <ul className="divide-y divide-edge/60" aria-hidden>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <InboxRowSkeleton key={i} />
+            ))}
+          </ul>
         ) : rows.length === 0 ? (
           <div className="px-6 py-16 text-center">
             <p className="text-sm text-dim">
@@ -150,6 +154,29 @@ function Offline({ message, onRetry }: { message: string; onRetry: () => void })
         Retry connection
       </button>
     </div>
+  );
+}
+
+// A loading placeholder that mirrors InboxRow's grid + padding exactly, so the
+// real list drops in without any layout shift. Clearly a placeholder, not data.
+function InboxRowSkeleton() {
+  return (
+    <li className="grid grid-cols-[auto_1fr_auto] items-center gap-4 px-4 py-3.5 sm:px-5">
+      <span className="skeleton size-9 rounded-xl" />
+
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <div className="skeleton h-3.5 w-28" />
+          <div className="skeleton hidden h-3 w-16 sm:block" />
+        </div>
+        <div className="skeleton mt-1.5 h-3.5 w-3/4 max-w-[22rem]" />
+      </div>
+
+      <div className="flex flex-col items-end gap-1.5">
+        <div className="skeleton h-5 w-20 rounded-full" />
+        <div className="skeleton h-3 w-14" />
+      </div>
+    </li>
   );
 }
 

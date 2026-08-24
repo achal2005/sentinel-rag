@@ -63,7 +63,7 @@ export default function RequestTracePage() {
         </Link>
 
         {loading ? (
-          <p className="mt-10 font-mono text-xs text-faint">Loading trace…</p>
+          <TraceSkeleton />
         ) : error ? (
           <div className="mt-6 rounded-2xl clay bg-surface p-5 text-sm">
             <p className="font-medium text-escalate">{error}</p>
@@ -75,6 +75,62 @@ export default function RequestTracePage() {
           <Trace run={run} />
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function TraceSkeleton() {
+  return (
+    <div aria-hidden>
+      {/* header */}
+      <div className="mt-5 flex items-start gap-3">
+        <span className="clay-sm mt-0.5 grid size-10 shrink-0 place-items-center rounded-xl bg-surface">
+          <div className="skeleton size-4.5 rounded" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="skeleton h-6 w-3/4 max-w-md" />
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <div className="skeleton h-3 w-24" />
+            <div className="skeleton h-3 w-16" />
+            <div className="skeleton h-3 w-20" />
+          </div>
+        </div>
+      </div>
+
+      {/* outcome banner */}
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl clay-inset bg-surface-2/50 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <div className="skeleton h-6 w-24 rounded-full" />
+          <div className="skeleton h-4 w-40" />
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="skeleton h-3 w-12" />
+          <div className="skeleton h-3 w-10" />
+          <div className="skeleton h-3 w-10" />
+        </div>
+      </div>
+
+      {/* watch log — placeholder timeline nodes */}
+      <section className="mt-8">
+        <div className="skeleton mb-4 h-3 w-32" />
+        <ol className="relative">
+          {[0, 1, 2].map((i) => (
+            <li key={i} className="relative grid grid-cols-[auto_1fr] gap-x-4 pb-6 last:pb-0">
+              <div className="relative flex flex-col items-center">
+                <span className="skeleton z-10 mt-1 size-3 rounded-full" />
+                {i < 2 && <span className="w-px flex-1 bg-edge" aria-hidden />}
+              </div>
+              <div className="-mt-0.5 min-w-0">
+                <div className="skeleton h-4 w-28" />
+                <div className="mt-2 space-y-1.5">
+                  <div className="skeleton h-3 w-56 max-w-full" />
+                  <div className="skeleton h-3 w-40 max-w-full" />
+                </div>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
     </div>
   );
 }
@@ -211,7 +267,7 @@ function TraceNode({
             {entries.map(([k, v]) => (
               <div key={k} className="contents">
                 <dt className="text-faint">{k}</dt>
-                <dd className="break-words text-dim">
+                <dd className="min-w-0 break-words text-dim">
                   {typeof v === "object" ? JSON.stringify(v) : String(v)}
                 </dd>
               </div>

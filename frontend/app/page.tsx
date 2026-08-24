@@ -712,25 +712,27 @@ function CountNumber({
   value: number;
   suffix?: string;
 }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-15% 0px" });
   const reduce = useReducedMotion();
   const [n, setN] = useState(0);
 
+  // The hero stats mount only once their real value has resolved (the API
+  // fetch has landed), and they sit at the top of the page — so we count up on
+  // mount rather than gating on scroll-into-view. Gating on an in-view margin
+  // was fragile: on shorter viewports the stats fell just outside the trigger
+  // band and the number stayed frozen at 0 (reading as "0 / 245"). A
+  // zero-duration tween covers reduced motion (jumps straight to the final
+  // value) without a direct setState in the effect body.
   useEffect(() => {
-    if (!inView) return;
-    // A zero-duration tween covers the reduced-motion case (it jumps straight
-    // to the final value) without a direct setState in the effect body.
     const controls = animate(0, value, {
       duration: reduce ? 0 : 1.4,
       ease: EASE,
       onUpdate: (v) => setN(v),
     });
     return () => controls.stop();
-  }, [inView, value, reduce]);
+  }, [value, reduce]);
 
   return (
-    <span ref={ref}>
+    <span>
       {Math.round(n)}
       {suffix}
     </span>
