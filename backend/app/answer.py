@@ -168,6 +168,22 @@ def answer(query: str, conn=None) -> Answer:
     retrieved_ids = {h.citation_id for h in hits if h.citation_id}
     # Only keep citations that were actually in the retrieved set (no fabrication).
     grounded = [c for c in cited if c in retrieved_ids]
+    unsupported = [c for c in cited if c not in retrieved_ids]
+
+    # Citations-or-escalate: an unsupported answer is never treated as successful.
+    # Escalate if the answer cites nothing we retrieved, or references any source
+    # that was never retrieved (a hallucinated/fabricated citation). We do not try
+    # to repair the answer -- an ungrounded answer is handed to a human.
+    if not grounded or unsupported:
+        return Answer(
+            query=query,
+            text=f"I couldn't fully ground an answer in the {PRODUCT_NAME} docs, so "
+            "I'm escalating it to a human.",
+            escalated=True,
+            citations=[],
+            hits=hits,
+            reason="unsupported_citation" if unsupported else "answered_without_valid_citation",
+        )
 
     return Answer(
         query=query,
@@ -175,5 +191,5 @@ def answer(query: str, conn=None) -> Answer:
         escalated=False,
         citations=grounded,
         hits=hits,
-        reason="answered" if grounded else "answered_without_valid_citation",
+        reason="answered",
     )

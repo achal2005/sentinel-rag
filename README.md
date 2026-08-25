@@ -105,7 +105,7 @@ flowchart TB
 
 ### Deterministic regression suite
 
-The pull-request gate runs **245 deterministic scenarios** against the production graph with external side effects safely controlled.
+The pull-request gate runs **245 deterministic regression cases** against the production graph with external side effects safely controlled. Each case has a fixed expected outcome — routing, escalation, authorization, tool, and approval behavior — so **245 / 245** means every regression case passed. It is **not** a measure of semantic answer accuracy, which is probabilistic and evaluated separately below.
 
 | Metric | Result |
 |---|---:|
@@ -122,7 +122,7 @@ These are overlapping capability checks, so a single scenario can contribute to 
 
 ### Semantic answer-quality evaluation
 
-A separate **calibrated LLM-as-judge** run evaluates answer *quality* rather than only deterministic behavior.
+A separate **calibrated LLM-as-judge** run evaluates answer *quality* rather than only deterministic behavior. Unlike the deterministic gate, these are **probabilistic** results: they measure semantic retrieval and grounding, which are not expected to be perfect.
 
 | Metric | Result |
 |---|---:|

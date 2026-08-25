@@ -321,6 +321,14 @@ def invoke(name: str, params: dict[str, Any], *, timeout: int = 15,
     else:
         result = _post_json(tool.url(), payload, timeout=timeout)
 
+    # A 2xx transport status does not mean the tool succeeded: an n8n workflow can
+    # return HTTP 200 with a body that reports failure (e.g. {"ok": false}). Treat
+    # an explicit ok:false as a failure so the action is never reported as success.
+    if isinstance(result, dict) and result.get("ok") is False:
+        raise ToolError(
+            f"webhook {tool.url()} reported failure: {result.get('error') or result}"
+        )
+
     if key is not None:
         _idem_store(key, name, result)
     return result

@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+
+from pydantic import ValidationError
 
 from app import answer as answer_module
 from app import critic, db, router, tools
+from app.config import CONFIDENCE_MIN
 from app.graph import action_node, escalate_node
 from app.embed import OllamaError
 from app.retrieve import Hit
@@ -197,6 +200,41 @@ class InfrastructureBoundTests(unittest.TestCase):
         self.assertEqual(outcome.citations, [])
         self.assertIn("escalating this to a human", outcome.text)
 
+    def test_zero_retrieved_documents_escalates(self) -> None:
+        # Retrieval finds nothing: escalate without hallucinating, and never call
+        # the generation model when there is no evidence to ground against.
+        chat = MagicMock()
+        with (
+            patch.object(answer_module, "search", return_value=[]),
+            patch.object(answer_module, "chat", chat),
+        ):
+            outcome = answer_module.answer("How do I rotate an API key?")
+
+        self.assertTrue(outcome.escalated)
+        self.assertEqual(outcome.citations, [])
+        self.assertEqual(outcome.reason, "low_retrieval_confidence")
+        chat.assert_not_called()
+
+    def test_low_confidence_retrieval_escalates(self) -> None:
+        # Top hit is below the confidence gate: escalate rather than answer, and
+        # do not spend a generation call on weak evidence.
+        weak = Hit(
+            id=1, doc="api-keys.md", heading="Rotating a key", citation_id="key-06",
+            content="Rotate under Settings -> API Keys.", score=0.2,
+            similarity=CONFIDENCE_MIN - 0.1, vector_rank=1, fts_rank=1,
+        )
+        chat = MagicMock()
+        with (
+            patch.object(answer_module, "search", return_value=[weak]),
+            patch.object(answer_module, "chat", chat),
+        ):
+            outcome = answer_module.answer("How do I rotate an API key?")
+
+        self.assertTrue(outcome.escalated)
+        self.assertEqual(outcome.citations, [])
+        self.assertEqual(outcome.reason, "low_retrieval_confidence")
+        chat.assert_not_called()
+
 
 class AnswerCitationContractTests(unittest.TestCase):
     def test_content_after_sources_line_is_not_counted_as_citation(self) -> None:
@@ -213,6 +251,181 @@ class AnswerCitationContractTests(unittest.TestCase):
             "Remove the AAAA record [rnd-01].\nSources: [rnd-01]",
         )
         self.assertNotIn("rnd-03", normalized)
+
+    @staticmethod
+    def _hit(citation_id: str = "billing-04", similarity: float = 0.82) -> Hit:
+        return Hit(
+            id=1, doc="billing.md", heading="Refunds", citation_id=citation_id,
+            content="Refunds are returned to the original payment method.",
+            score=0.9, similarity=similarity, vector_rank=1, fts_rank=1,
+        )
+
+    def test_answer_without_valid_citation_escalates(self) -> None:
+        # Retrieval clears the confidence gate, but the model answers with no
+        # citation at all. An uncited answer is never treated as successful.
+        with (
+            patch.object(answer_module, "search", return_value=[self._hit()]),
+            patch.object(answer_module, "chat",
+                         return_value="Refunds take five business days."),
+        ):
+            outcome = answer_module.answer("How long do refunds take?")
+
+        self.assertEqual(outcome.citations, [])
+        self.assertTrue(outcome.escalated)
+        self.assertEqual(outcome.reason, "answered_without_valid_citation")
+
+    def test_hallucinated_citation_is_rejected(self) -> None:
+        # The only citation the model produced ([fake-92]) was never retrieved.
+        with (
+            patch.object(answer_module, "search", return_value=[self._hit()]),
+            patch.object(answer_module, "chat",
+                         return_value="Refunds take five business days [fake-92]."),
+        ):
+            outcome = answer_module.answer("How long do refunds take?")
+
+        self.assertNotIn("fake-92", outcome.citations)
+        self.assertEqual(outcome.citations, [])
+        self.assertTrue(outcome.escalated)
+        self.assertEqual(outcome.reason, "unsupported_citation")
+
+    def test_mixed_valid_and_fake_citations_escalate(self) -> None:
+        # One real citation ([billing-04]) plus one fabricated one ([fake-92]).
+        # A partially-fabricated answer is not a fully grounded answer.
+        raw = (
+            "Refunds take five days [billing-04].\n"
+            "Contact support after ten days [fake-92]."
+        )
+        with (
+            patch.object(answer_module, "search", return_value=[self._hit()]),
+            patch.object(answer_module, "chat", return_value=raw),
+        ):
+            outcome = answer_module.answer("How long do refunds take?")
+
+        self.assertTrue(outcome.escalated)
+        self.assertNotIn("fake-92", outcome.citations)
+        self.assertEqual(outcome.citations, [])
+
+
+class ToolExecutionSafetyTests(unittest.TestCase):
+    def test_tool_200_with_failure_payload_is_not_success(self) -> None:
+        # n8n answers HTTP 200 but the body reports failure. invoke() must surface
+        # this as a ToolError, never a success result.
+        failure = {"ok": False, "error": "ticket creation failed"}
+        with (
+            patch.object(tools, "TOOLS_SIMULATE", False),
+            patch.object(tools, "_post_json", return_value=failure),
+        ):
+            with self.assertRaises(tools.ToolError):
+                tools.invoke("create_ticket", {"subject": "Login broken"})
+
+        # And through the graph node: the action is not reported as created.
+        state = {
+            "request": "Please create a support ticket for my login problem.",
+            "decision": Decision("action", "support_issue", "medium", True),
+        }
+        with (
+            patch.object(tools, "TOOLS_SIMULATE", False),
+            patch.object(tools, "_post_json", return_value=failure),
+            patch.object(tools, "_idem_lookup", return_value=None),
+            patch.object(tools, "_idem_store"),
+        ):
+            outcome = action_node(state)
+
+        self.assertNotEqual(outcome["action"]["status"], "created")
+        self.assertEqual(outcome["action"]["status"], "failed")
+        self.assertTrue(outcome["escalated"])
+        self.assertEqual(outcome["reason"], "action_tool_failed")
+
+    def test_invalid_tool_parameters_do_not_execute(self) -> None:
+        calls = {"n": 0}
+
+        def counting_post(url, payload, timeout):
+            calls["n"] += 1
+            return {"ok": True, "id": "1"}
+
+        with (
+            patch.object(tools, "TOOLS_SIMULATE", False),
+            patch.object(tools, "_post_json", side_effect=counting_post),
+        ):
+            # missing required 'subject'
+            with self.assertRaises(ValidationError):
+                tools.invoke("create_ticket", {"body": "no subject"})
+            # invalid requester_email shape
+            with self.assertRaises(ValidationError):
+                tools.invoke(
+                    "create_ticket",
+                    {"subject": "x", "requester_email": "not-an-email"},
+                )
+            # high-risk tool missing its required invoice_id
+            with self.assertRaises(ValidationError):
+                tools.invoke("cancel_invoice", {"requester_email": "a@b.com"})
+
+        self.assertEqual(calls["n"], 0)
+
+
+class _FakeConn:
+    """A no-op DB connection: approve()/reject() only call .execute() on it."""
+
+    def execute(self, *args, **kwargs):
+        return None
+
+
+class ApprovalQueueSafetyTests(unittest.TestCase):
+    def test_approved_action_cannot_be_approved_twice(self) -> None:
+        executions = {"n": 0}
+
+        def fake_invoke(name, params, **kwargs):
+            executions["n"] += 1
+            return {"ok": True, "id": "T-1"}
+
+        pending = {
+            "id": 1, "status": "pending", "tool": "cancel_invoice",
+            "params": {"invoice_id": "INV-1"}, "request": "cancel INV-1",
+            "run_id": None,
+        }
+        executed = {**pending, "status": "executed"}
+        allow = critic.Verdict(critic.ALLOW, "clean", "no concern")
+
+        with (
+            patch.object(tools, "get_approval", side_effect=[pending, executed]),
+            patch.object(tools, "invoke", side_effect=fake_invoke),
+            patch.object(tools, "_audit_decision"),
+            patch.object(critic, "review", return_value=allow),
+        ):
+            first = tools.approve(1, conn=_FakeConn())
+            self.assertEqual(first["status"], "executed")
+            with self.assertRaises(tools.ApprovalNotPending):
+                tools.approve(1, conn=_FakeConn())
+
+        self.assertEqual(executions["n"], 1)
+
+    def test_rejected_high_risk_action_never_executes(self) -> None:
+        executions = {"n": 0}
+
+        def fake_invoke(name, params, **kwargs):
+            executions["n"] += 1
+            return {"ok": True, "id": "X"}
+
+        pending = {
+            "id": 2, "status": "pending", "tool": "cancel_invoice",
+            "params": {"invoice_id": "INV-9"}, "request": "cancel INV-9",
+            "run_id": None,
+        }
+        rejected = {**pending, "status": "rejected"}
+
+        with (
+            patch.object(tools, "get_approval", side_effect=[pending, rejected]),
+            patch.object(tools, "invoke", side_effect=fake_invoke),
+            patch.object(tools, "_audit_decision"),
+        ):
+            out = tools.reject(2, conn=_FakeConn())
+            self.assertEqual(out["status"], "rejected")
+            self.assertFalse(out["executed"])
+            # A rejected item can never be approved into execution afterwards.
+            with self.assertRaises(tools.ApprovalNotPending):
+                tools.approve(2, conn=_FakeConn())
+
+        self.assertEqual(executions["n"], 0)
 
 
 if __name__ == "__main__":
